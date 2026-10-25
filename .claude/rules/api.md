@@ -9,9 +9,9 @@ paths:
 # API 계약 (근거 D-02·D-07·D-08·D-12·D-15)
 
 ## 공통
-- 로그인·재발급 응답은 `{"access_token": "<JWT>", "refresh_token": "<불투명 토큰>"}`이다. `access_token`은 명세 필드이고 `refresh_token`은 사용자 요청 확장(D-15)이다. 두 필드 모두 응답 record에 `@JsonProperty`로 snake_case를 명시한다. 나머지 필드는 모두 한 단어이며, 여러 단어 필드를 추가하면 같은 방식으로 명시한다(전역 네이밍 전략은 springdoc 스키마에 반영되지 않아 쓰지 않는다).
+- 로그인·재발급 응답은 `{"access_token": "<JWT>", "refresh_token": "<불투명 토큰>"}`이다. `access_token`은 명세 필드이고 `refresh_token`은 사용자 요청 확장(8단계, D-15)이다. 여러 단어 필드(`access_token`, `refresh_token`)는 요청 record(재발급 요청 본문)와 응답 record 모두 `@JsonProperty`로 snake_case를 명시한다 — 빠뜨리면 요청 값이 null로 바인딩된다. 나머지 필드는 모두 한 단어이며, 여러 단어 필드를 추가하면 같은 방식으로 명시한다(전역 네이밍 전략은 springdoc 스키마에 반영되지 않아 쓰지 않는다).
 - 인증 헤더는 `Authorization: Bearer <access_token>`. 액세스 토큰이 만료되면 클라이언트는 `POST /users/refresh`로 새 토큰 쌍을 받고 원래 요청을 다시 보낸다.
-- 오류 본문은 RFC 9457 ProblemDetail(`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`(검증 실패 시 `errors` 추가). 401도 같은 형식에 `WWW-Authenticate: Bearer` 헤더를 유지한다.
+- 오류 본문은 RFC 9457 ProblemDetail(`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`(검증 실패 시 `errors` 추가). 모든 401(토큰 없음·무효·만료, 로그인·재발급 실패)은 같은 형식에 `WWW-Authenticate: Bearer` 헤더를 넣는다(RFC 9110 §15.5.2 MUST).
 - 상태 코드: 검증 실패 400 · 인증 실패 401 · 리소스 없음/타인 소유 404 · username 중복 409.
 - API 문서: `/swagger-ui.html`(springdoc). `@SecurityRequirement`는 보호 API에만 붙인다(가입·로그인·재발급 제외).
 
@@ -19,7 +19,7 @@ paths:
 | ID | Method · Path | 인증 | 요청 본문 | 성공 | 응답 본문 | 오류 |
 |---|---|---|---|---|---|---|
 | API-01 | `POST /users/signup` | ✗ | `username`, `password` | 201 | `{id, username}` | 400, 409 |
-| API-02 | `POST /users/login` | ✗ | `username`, `password` | 200 | `{access_token, refresh_token}` | 400, 401 |
+| API-02 | `POST /users/login` | ✗ | `username`, `password` | 200 | `{access_token}` → 8단계부터 `{access_token, refresh_token}` | 400, 401 |
 | API-03 | `GET /users/me` | ✓ | – | 200 | `{id, username}` | 401 |
 | API-11 | `POST /users/refresh` | ✗ | `refresh_token` | 200 | `{access_token, refresh_token}` | 400, 401 |
 | API-04 | `POST /todos` | ✓ | `title`, `description`(선택) | 201 + `Location: /todos/{id}` | Todo | 400, 401 |

@@ -9,9 +9,9 @@
 ## 1. 기술·실행 (TECH)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ✅ JDK 17·21에서 컴파일·테스트 통과, class 61(S4·S6) |
+| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ✅ JDK 17·21에서 `clean build` 통과(S7), class 61(S4) |
 | TECH-02 | Spring Boot 3.5.16 | 초안·D-01 | `build.gradle` | `./gradlew dependencies` | ✅ spring-boot 3.5.16 해석 확인(S4) |
-| TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | ✅ Gradle 9.8.2 + Boot 3.5.16, JDK 17·21에서 build·test 통과(S4·S6). deprecation 경고 1건(Gradle 11 제거 예정) |
+| TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | ✅ Gradle 9.8.2 + Boot 3.5.16, JDK 17·21에서 `clean build` 통과(S7). deprecation 경고 1건(Gradle 11 제거 예정) |
 | TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | 🟨 bootRun 기동·SQLite 3.49.1 인식(S6) — CRUD는 7단계 |
 | TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | ✅ JUnit 5.12.2로 테스트 실행(S6) |
 | TECH-06 | 테이블은 README 명령만으로 생성 — 생성 경로는 `ddl-auto` 하나(수동 SQL·`schema.sql`·DB 파일 제공 금지), README에 SQL 명령 없음 | 명세 기술 조건·요청·D-10 | `application.yaml` | `todo.db`를 지운 클린 상태에서 README 명령만 실행 후 `.schema` | ⬜ |
@@ -62,9 +62,10 @@
 |---|---|---|---|---|---|
 | DB-01 | `sqlite-jdbc`·`hibernate-community-dialects` 의존성, dialect `SQLiteDialect`, `ddl-auto: update` | 명세 SQLite 설정 참고 | `build.gradle`, `application.yaml` | 기동 로그, `./gradlew dependencies` | ✅ 의존성·dialect·`ddl-auto: update` 설정, bootRun 기동(S4·S6) |
 | DB-02 | SQLite에서 생성·조회·수정·삭제 실제 동작 | 초안 | persistence 어댑터 | TEST-02 | ⬜ |
-| DB-03 | 테이블·관계(FK 미생성 대응): `users`(username `unique`), `todos`(`user_id` 인덱스), `refresh_tokens`(`token_hash` `unique`) | 초안·요청·D-04·D-10 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ⬜ |
+| DB-03 | 테이블·관계(FK 미생성 대응): `users`(username `unique`), `todos`(`owner_id` 인덱스) — 7단계 | 초안·D-04·D-10 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ⬜ |
 | DB-04 | 개발 DB와 테스트 DB 분리 | 초안·D-10 | `todo.db` / `build/todo-test.db` | 테스트 후 `todo.db` 미변경 | ✅ 테스트는 `build/todo-test.db` 사용, 실행 후 `todo.db` 미생성(S6, JDK 17·21) |
 | DB-05 | `*.db` 커밋·제출 제외 | 명세 제출물 | `.gitignore`, ZIP | `git check-ignore`, `unzip -l` | 🟨 `.gitignore` 검증 완료(2026-10-25), ZIP 미검증 |
+| DB-06 | `refresh_tokens`(`token_hash` `unique`, `user_id` 인덱스) — 8단계(S7에 DB-03에서 분리) | 요청·D-15 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ⬜ |
 
 ## 6. 테스트 (TEST)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -96,14 +97,15 @@
 | DOC-03 | README: 테스트 실행 방법 `./gradlew test` | 명세 제출물 | `README.md` | 실행 확인 | ⬜ |
 | DOC-04 | README: API 목록 요약(+ Swagger UI 주소) | 명세 제출물·D-02 | `README.md` | `api.md`와 대조 | ⬜ |
 | DOC-05 | README: 인증 방법(로그인 → Bearer, 만료 1시간, `/users/refresh` 재발급) | 초안·요청 | `README.md` | 검토 | ⬜ |
-| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#4 기록 |
-| DOC-07 | 프롬프트 원문 보존 — 받은 턴 안에 기록, 훅 자동 백업(로컬), 이전 프롬프트 백필 | 요청·D-16 | `.claude/hooks/log-prompt.py`, `.claude/prompt-history.jsonl` | 파이프 테스트, 다음 프롬프트 기록 확인 | ✅ 실제 프롬프트·작업 중 메시지가 `source: "hook"`으로 기록됨(S5) |
+| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#6 기록 — 압축 뒤 원문 대조로 누락 없음 확인(S7) |
+| DOC-07 | 프롬프트 원문 보존 — 받은 턴 안에 기록, 훅 자동 백업(로컬), 이전 프롬프트 백필 | 요청·D-16 | `.claude/hooks/log-prompt.py`, `.claude/prompt-history.jsonl` | 파이프 테스트, 다음 프롬프트 기록 확인 | ✅ 실제 프롬프트·작업 중 메시지가 `source: "hook"`으로 기록됨(S5), 압축 뒤 첫 프롬프트 기록·하네스 메시지 제외(S7) |
+| DOC-08 | 세션 시작·압축 후 CLAUDE.md 전체 로드 확인과 지침 로드 기록 | 요청·D-17 | `.claude/hooks/log-instructions.py`, `.claude/instructions-log.jsonl` | 트랜스크립트 주입본과 디스크 파일 비교, 훅 기록 | 🟨 CLAUDE.md 전체 주입·`path_glob_match` 기록 확인(S7). `session_start`·`compact` 기록은 다음 세션·압축 때 확인 |
 | SUB-01 | 파일명 `이름_springboot.zip`, 제출처 채용 사이트(사람인/잡코리아) | 명세 제출물 | — | 파일명 확인 | ⬜ |
 | SUB-02 | 제외: `build/`, `target/`, `.gradle/`, `*.db` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
 | SUB-03 | 포함: 소스 전체 — `src/`, `build.gradle`, `README.md`, `prompts/used_prompts.md` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
-| SUB-04 | Wrapper(`gradlew`, `gradle/wrapper/*`) 포함, `.claude/settings.local.json`·`HELP.md` 제외 | 설계·D-13 | ZIP | `unzip -l` | 🟨 `HELP.md` 삭제 완료, ZIP 미검증 |
-| SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `git ls-tree`, `unzip -l` | 🟨 원격 트리 제외 확인(`52809a9`), ZIP 미검증 |
-| SUB-06 | 커밋 작성자 정보에 회사 도메인 없음(닉네임 + GitHub noreply) | 요청·D-13 | 저장소 로컬 git 설정 | `git log --format='%ae %ce'` | ✅ 원격 커밋 3개 모두 noreply·`manners-parkpro` 연결 확인(S5, GitHub API) |
+| SUB-04 | Wrapper(`gradlew`, `gradle/wrapper/*`) 포함, `.claude/settings.local.json`·`.claude/*.jsonl`(로컬 기록)·`HELP.md` 제외 | 설계·D-13·D-16 | ZIP | `unzip -l` | 🟨 `HELP.md` 삭제 완료, ZIP 미검증 |
+| SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `git ls-tree`, `unzip -l` | 🟨 원격 트리 제외 확인(S7, `origin/main`), ZIP 미검증 |
+| SUB-06 | 커밋 작성자 정보에 회사 도메인 없음(닉네임 + GitHub noreply) | 요청·D-13·D-19 | 저장소 로컬 git 설정, `guard-git.py` 훅 | `git log --format='%ae %ce'` | ✅ 원격 `main`의 모든 커밋 작성자·커미터가 noreply(S7), `manners-parkpro` 연결(S5, GitHub API). 커밋·푸시 훅이 강제(S7) |
 
 ## 8. 선택 사항 — 가산점 (OPT, 필수 완료 후 결정 — D-14)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -115,7 +117,7 @@
 ## 9. 미해결·위험
 | ID | 내용 | 조치 |
 |---|---|---|
-| R-1 | Boot 3.5.16 + Gradle 9.8.2는 공식 지원 목록 밖 | 해결(S6): JDK 17·21에서 build·test 통과 — 폴백 불필요 |
+| R-1 | Boot 3.5.16 + Gradle 9.8.2는 공식 지원 목록 밖 | 해결: JDK 17·21에서 `clean build` 통과(S7) — 폴백 불필요 |
 | R-2 | Boot 3.5 OSS 종료 — 엔터프라이즈 전용으로만 수정된 CVE 존재(전제 기능 미사용으로 비해당) | SEC-10 유지, Tomcat은 OSS 패치 반영(TECH-08) |
 | R-3 | Hikari 풀 1개 설정의 실제 동작 미검증 | 기동·contextLoads에서 연결 문제 없음(S6). 요청 처리 중 동작은 7단계 이후 확인 |
 | R-4 | springdoc 스키마와 실제 응답 표기 일치 여부 | `/v3/api-docs`에서 `access_token`·`refresh_token` 확인 |

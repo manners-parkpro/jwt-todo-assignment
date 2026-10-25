@@ -3,33 +3,46 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-25
-- **단계: 4단계(설정·테스트 기반) 완료 → 5단계 대기.** 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
-- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean test` 통과(contextLoads). `bootRun` 기동·정상 종료 확인.
-- 원격: 사용자가 저장소를 재생성했고, 저장소 로컬 자격 증명 헬퍼(`gh auth token --user manners-parkpro`)로 푸시했다. 원격 커밋 작성자는 모두 noreply다.
-- 프롬프트 원문 백업 훅: 실제 프롬프트와 작업 중 메시지가 기록되는 것을 확인했다(S5).
+- **단계: 4단계(설정·테스트 기반) 완료 → 5단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(contextLoads, S7). `bootRun` 기동·정상 종료 확인(S6).
+- 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
+- 지침·기록(S7): 압축 뒤 CLAUDE.md 전체 주입 확인. 로컬 훅 3개 — 프롬프트 원문 백업(하네스 메시지 제외), 지침 로드 기록, 커밋·푸시 검사(작성자·테스트·강제 푸시).
 
-## 다음 작업 (한 단계씩 — 단계마다 검증 결과 보고 후 사용자 확인)
+## 다음 작업 (한 단계씩 — 계획·구현·검증·독립 리뷰·보고 후 사용자 확인)
 1. [x] 사용자 확인 사항 처리 — 명세 확보, D-01·D-02 결정, `memory-bank/` 삭제(백업), `git init`
 2. [x] 저장소 정리·원격 연결 — `.gitignore` 보강, Initializr 잔여물 삭제, origin 연결
 3. [x] 빌드 기준선 교정 — `build.gradle` Boot 3.5.16·`release 17`·Tomcat 10.1.61·springdoc 2.8.17·Lombok main만 (검증: S4)
 4. [x] 설정과 테스트 베이스 — `application.yaml`(SQLite·JPA), `application-test.yaml`, `IntegrationTestSupport` (검증: S6). `auth.*`는 사용하는 코드와 함께 5단계로 조정
 5. [ ] 보안 골격: `auth.*` 설정·SecurityConfig·JWT 빈(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01
 6. [ ] User·Auth 필수 범위: 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06
-7. [ ] Todo 기능 → TEST-02·04, 클린 상태에서 README 명령만으로 `.schema` 확인 — API-04~09, ERR-02~04, DB-02·03, TECH-06
-8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지) → TEST-07·08 + **TEST-01~04 회귀** — API-11, SEC-11
+7. [ ] Todo 기능 → TEST-02·04, 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인 — API-04~09, ERR-02·03, DB-02·03
+8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지) → TEST-07·08 + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06
 9. [ ] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10
-10. [ ] 선택 테스트 TEST-X1~X4, 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06
-11. [ ] README 작성과 명령 실검증(macOS/Linux·Windows 병기, SQL 명령 없음) — DOC-01~05, TECH-07
-12. [ ] 선택 기능 OPT-01~03 결정 — D-14
-13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06·07
+10. [ ] 선택 테스트 TEST-X1~X4, 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
+11. [ ] 선택 기능 OPT-01~03 결정(구현하면 테스트 포함) — D-14
+12. [ ] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령, SQL 명령 없음), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18
+13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08
 
 ## 환경 메모
-- JDK: 이 PC 기본은 Corretto 21.0.10. 기본 검증은 OpenJDK 17.0.18(`JAVA_HOME=$(/usr/libexec/java_home -v 17)`), 단계 완료 시 21로 교차 확인. 전역 Gradle 없음 → `./gradlew`만 사용
+- JDK: 이 PC 기본은 Corretto 21.0.10. 기본 검증은 OpenJDK 17.0.18이며, 셸 환경 변수가 Bash 호출마다 초기화되므로 명령마다 `JAVA_HOME=$(/usr/libexec/java_home -v 17)`을 붙인다. `java -version`은 PATH 앞쪽의 Corretto 21을 가리키므로 사용 JDK는 `./gradlew --version`의 Launcher JVM으로 확인한다. 단계 완료 시 21로 교차 확인. 전역 Gradle 없음 → `./gradlew`만 사용
 - sqlite3 3.51.0(macOS 기본), openssl·zip·unzip·jq 사용 가능. macOS에는 `timeout` 명령이 없다
 - Git: 브랜치 `main`, 원격 `origin` = https://github.com/manners-parkpro/jwt-todo-assignment.git (공개). 저장소 로컬 작성자 = `Colin <43167000+manners-parkpro@users.noreply.github.com>`. `docs/assignment-spec.md`, `.claude/settings.local.json`, `.claude/prompt-history.jsonl`은 `.gitignore`로 제외. 푸시 인증은 저장소 로컬 `credential.https://github.com.helper`가 `gh auth token --user manners-parkpro`를 사용(gh 활성 계정·전역 설정은 그대로)
-- 프롬프트 원문 백업: `.claude/hooks/log-prompt.py`(UserPromptSubmit 훅, 설정은 `.claude/settings.local.json`) → `.claude/prompt-history.jsonl`
+- 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-25 · S7 압축 뒤 점검 — 프롬프트 기록·CLAUDE.md 로드 검증, 설계 문서 리팩터링(독립 리뷰·best practices 대조)
+- 확인(프롬프트): 백업 15줄과 `used_prompts` 대조 — 사용자 프롬프트 누락 0건(#1~#5에 원문, 계정명 가림·초안은 요지), 이번 프롬프트는 #6. 압축 뒤 첫 프롬프트도 훅이 기록. 비사용자 줄 5건: `/effort`, `<task-notification>` 2, `<agent-message` 2
+- 확인(CLAUDE.md 로드): 압축 뒤 트랜스크립트 주입본(4,820자) = 디스크 파일(유지보수 HTML 주석 3줄·끝 줄바꿈만 다름 — 설계대로 제거). 경로 규칙은 압축 뒤 `docs.md` 재로드, rules를 직접 Read한 뒤에는 재주입 안 됨(중복 방지), 새 컨텍스트 서브에이전트에서 `build.md`·`architecture.md`·`security.md` 로드 → 강제 재주입 훅은 불필요(D-17)
+- 추가: `log-instructions.py`, `guard-git.py`, `.claude/agents/step-reviewer.md`, `log-prompt.py` 하네스 메시지 제외, `.gitignore`에 `instructions-log.jsonl`
+- 문서: 독립 리뷰 서브에이전트 지적과 best practices 대조 반영 — JDK 명령마다 지정, 단계·ID 매핑(DB-06 분리, ERR-04 → 10단계, TECH-06 최종 확인 12단계), README·OPT 순서 교체, SKILL 기록→ZIP 순서·SEC-09 점검, Windows 명령 범위(D-18), 요청 record `@JsonProperty`, 모든 401 `WWW-Authenticate`, `@Value`·기능 예외 위치, todos `owner_id`, 오래된 진술 정정, CLAUDE.md 정리(도출 가능한 줄·중복 행 삭제, 커밋 규칙·리뷰 단계 추가)
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew test` → BUILD SUCCESSFUL, tests=1 failures=0 (Launcher JVM 17.0.18)
+  - JDK 17·21 `./gradlew clean build --warning-mode all` → 둘 다 BUILD SUCCESSFUL, tests=1, bootJar·plain jar, `todo.db` 없음. 경고: Boot 플러그인 deprecation 1건, 테스트 JVM CDS 안내 1건(영향 없음)
+  - 훅 파이프 테스트: log-prompt(하네스 메시지 2종 제외, `<`로 시작하는 일반 입력은 기록, 잘못된 JSON은 종료 1), log-instructions(글자 수·해시가 `wc -m`·`shasum`과 일치), guard-git 15건(허용 6·거부 9). 설정 뒤 실제 동작: InstructionsLoaded 3건 기록, guard-git이 무해한 `echo` 거부
+  - 원격: `origin/main` = 로컬 `48735c6`, 커밋 6개 작성자·커미터 모두 noreply, 명세 사본 없음, 추적 파일에 회사 식별자 없음. sqlite-jdbc jar에 Windows 네이티브 포함
+- 실수: `py_compile` 점검이 `.claude/hooks/__pycache__`를 만들어 삭제. rules를 직접 Read한 뒤 재로드를 시험해 처음엔 로드 실패로 오해 → 새 컨텍스트 서브에이전트로 재확인
+- 다음: 사용자 확인 후 5단계
 
 ### 2026-10-25 · S6 4단계 설정과 테스트 기반
 - 완료: `application.yaml`(SQLite `todo.db`, Hikari 풀 1, SQLiteDialect, `ddl-auto: update`, `open-in-view: false`), `src/test/resources/application-test.yaml`(`build/todo-test.db`, `create-drop`), `IntegrationTestSupport`(`@SpringBootTest`·`@AutoConfigureMockMvc`·`@ActiveProfiles("test")`), `AssignmentApplicationTests`가 베이스 상속. `auth.*` 설정은 쓰는 코드와 함께 5단계로 옮김(쓰이지 않는 설정 방지)

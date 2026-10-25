@@ -18,14 +18,14 @@ com.assignment
 │       ├── in/web                       # Controller(UserController, AuthController, TodoController), Request/Response DTO (record)
 │       └── out/persistence, out/security   # JPA 어댑터 / (user) 토큰 발급·비밀번호 해시 어댑터
 └── global
-    ├── security                         # SecurityFilterChain, JwtEncoder/Decoder·PasswordEncoder 빈, EntryPoint, 현재 사용자 어노테이션
+    ├── security                         # SecurityFilterChain, JwtEncoder/Decoder·PasswordEncoder 빈, 공개 인증 경로용 BearerTokenResolver, EntryPoint, 현재 사용자 어노테이션
     ├── error                            # GlobalExceptionHandler (예외 → ProblemDetail)
     └── config                           # springdoc OpenAPI 설정
 ```
 
 ## 의존 방향 (위반 금지)
 - `domain`: 다른 계층·프레임워크에 의존하지 않는다. `org.springframework`, `jakarta.persistence`, `com.fasterxml` import 금지 (Lombok `@Getter`만 허용).
-- `application`: `domain`만 의존한다. 프레임워크는 `@Service`, `@Transactional`만 허용하고 웹·JPA·Spring Data·Spring Security 타입은 쓰지 않는다.
+- `application`: `domain`만 의존한다. 프레임워크는 `@Service`, `@Transactional`과 설정값을 받는 생성자 파라미터의 `@Value`(예: 리프레시 토큰 수명)만 허용하고 웹·JPA·Spring Data·Spring Security 타입은 쓰지 않는다.
 - `adapter.in.web`: `application.port.in`만 호출한다(응답 변환을 위해 `domain` 읽기는 가능). 서비스 구현체·리포지토리를 직접 호출하지 않는다.
 - `adapter.out.*`: `application.port.out`을 구현하고 `domain`을 사용한다. `global`은 공통 설정만 담고 기능 로직을 두지 않는다.
 - 기능 간(`user` ↔ `todo`) 직접 참조 금지. TODO는 소유자를 `ownerId`(Long)로만 참조한다(집합체 간 ID 참조).
@@ -45,7 +45,7 @@ com.assignment
 ## 코드 규칙
 - 생성자 주입만 사용한다(필드 주입 금지).
 - Lombok은 `@Getter`, `@RequiredArgsConstructor`, `@NoArgsConstructor(access = AccessLevel.PROTECTED)` 위주로 쓰고 `@Data`·`@Setter`는 금지한다. DTO·Command는 record로 만든다.
-- 예외 → HTTP 상태 매핑은 `global.error.GlobalExceptionHandler`에서만 한다. 도메인·애플리케이션 예외에 HTTP 개념(`@ResponseStatus`, `HttpStatus`)을 넣지 않는다.
+- 기능 예외(예: `TodoNotFoundException`)는 해당 기능의 `application` 패키지에 두고 HTTP 개념(`@ResponseStatus`, `HttpStatus`)을 넣지 않는다. 예외 → HTTP 상태 매핑은 `global.error.GlobalExceptionHandler`에서만 하며, 이를 위해 `global.error`가 기능 예외를 참조하는 것만 허용한다.
 - 클래스명: `<대상>UseCase`, `<대상>Service`, `<대상>Controller`, `<대상>PersistenceAdapter`, `<대상>JpaEntity`, `<대상>JpaRepository`, `<동작><대상>Request`, `<대상>Response`.
 
 ## 점검 명령
