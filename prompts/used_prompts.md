@@ -1,0 +1,120 @@
+# AI 활용 기록 (used_prompts)
+
+> 과제 필수 제출물이다. 사용한 주요 프롬프트와 받은 결과를 어떻게 확인하고 고쳤는지 간단히 기록한다.
+> - 도구: Claude Code (모델: Claude Opus 5.5)
+> - 실제로 사용한 프롬프트와 실제로 수행한 검증만 기록한다. 비밀번호·JWT 서명 키·실제 토큰은 기록하지 않는다.
+
+| # | 날짜 | 작업 | 결과 |
+|---|---|---|---|
+| 1 | 2026-10-25 | 작업 지침(CLAUDE.md) 초안 검증·경량화·분리, 작업 관리 문서 작성 | 반영 |
+| 2 | 2026-10-25 | 과제 명세 원문 대조, 설계 최적화(보안·YAGNI·실행 재현성) | 반영 |
+| 3 | 2026-10-25 | 저장소 정리·원격 연결, 테이블 생성 경로 제약, 토큰 재발급 확장 설계 | 반영 |
+
+---
+
+## #1 작업 지침 검증·경량화와 작업 관리 체계 수립
+
+**① 목적** — 구현 전에 Claude Code 작업 지침 초안을 best practice와 실제 라이브러리 동작으로 검증하고, 규칙별로 나눠 압축한다.
+
+**② 주요 프롬프트** (원문)
+```text
+JWT TODO 과제 전형을 위한, 설계를 먼저 작성 후 진행한다.
+설계 내용은 아래와 같으며, 작성 및 설계 전에 `best practice` 가 있는지 `다시 한번 면밀히 검증하고 검토`하여 진행한다.
+
+### 최초 CLAUDE.md 설계 사항
+(첨부: CLAUDE.md 초안 — 아래 요지)
+
+### 추가 보안 및 요청사항
+CLAUDE.md만으로 끝내지 말고, 실제 프로젝트 진행 중 아래 파일도 관리하면 좋다.
+마지막으로, claude.md 파일이 너무 크기때문에, 규칙 및 제약에 따라 md 파일을 `최적화 및 컴팩트`하게 `작성 및 분리`한다.
+추가로, `작업 관리 및 분리`를 위해 아래 md 도작성한다.
+- `docs/requirements-checklist.md`
+- `docs/decisions.md`
+- `docs/progress.md`
+```
+- 첨부 초안 요지: 12개 절, 458줄 — 목표·기술 스택(Java 21, Spring Boot 3.x, 헥사고날·DDD), 작업 원칙 10개, 필수 요구사항(API 8개·JWT·상태 코드), 필수 테스트 4종, 아키텍처 원칙, SQLite 검증, README·프롬프트 기록 조건, 세션 관리, 최종 체크리스트·보고. 내용은 결과물 `CLAUDE.md`·`.claude/rules/`·`docs/requirements-checklist.md`에 반영돼 있다.
+- 작업 중 추가 지시(원문): "1. 현재 단계는 구현 단계가 아닌, 설계 단계 이며, CLAUDE.md 에 작성 되어 있듯이 임의로 구현 및 작성해서는 `절대` 안된다. 2. 위에 요청한 설계 문서에 관련하여 작업이 완전히 끝나면 그 이후 부터 `면밀히 검증하면서 한단계씩` 진행 하도록 한다. - 추가로, 설계 문서 작성시 보고 사항 또는 더 좋은 설계안이 있다면 즉시 보고한다."
+
+**③ AI 제안 핵심** — 매 세션 로드되는 CLAUDE.md(458줄 → 72줄)에는 항상 필요한 규칙만 두고, 영역별 세부 규칙은 `.claude/rules/`(해당 경로 파일을 다룰 때만 로드), 최종 제출 절차는 skill, 진행 상태는 `docs/`로 분리한다. 설계 결정 13건(D-01~D-13)을 제안했다.
+
+**④ 확인 방법**
+- Claude Code 공식 문서(memory·best-practices·skills): CLAUDE.md 200줄 미만 권장, 경로 한정 rule의 로드 시점, `@import`는 컨텍스트를 줄이지 못함.
+- Maven Central·start.spring.io·endoflife.date·`spring-boot-dependencies-3.5.16.pom`으로 버전과 관리 의존성을 확인했다.
+- 소스 jar를 직접 확인했다: Hibernate SQLiteDialect는 FK DDL을 만들지 않음, Spring Security `BCrypt`는 72바이트 초과 시 예외, `NimbusJwtEncoder` 기본 헤더는 RS256.
+- 작성한 문서를 점검했다: frontmatter 파싱, 문서 간 ID 교차 참조, 구현 파일 미변경(수정 시각).
+
+**⑤ 오류·개선점**
+- 기존 Initializr 생성물이 Boot 4.1.2·Gradle 9.8.2였다(→ #2에서 재검토).
+- 초안: 권장 크기 초과, 매 세션 전체 소스 읽기 지시, 자명한 지침 포함, JWT 방식·오류 형식·테스트 키 처리 미정.
+- AI 가정 정정: `@ManyToOne`이면 FK가 생긴다고 가정했으나 소스 확인 결과 SQLite에서는 생성되지 않아 ID 참조 + 인덱스로 바꿨다.
+
+**⑥ 반영** — CLAUDE.md·rules·skill·docs를 작성했다. 추가 지시에 따라 "설계 승인 전 구현 금지·단계별 검증·즉시 보고"를 CLAUDE.md 작업 원칙에 넣었다.
+
+---
+
+## #2 과제 명세 원문 대조와 설계 최적화
+
+**① 목적** — 과제 명세 원문과 설계를 대조하고, 보안·YAGNI·실행 재현성 관점에서 설계를 다시 검증한다.
+
+**② 주요 프롬프트** (원문)
+```text
+1. 설계에 대한 부분에 대해 적용전에 `면밀히 검증하고 검토하여` 더 좋은 `최적화`되어야 할 부분이 없다면. -> 승인.
+2. 과제 명세서는 아래와 같아.
+https://chalk-mitten-2ee.notion.site/JWT-TODO-API-3db5808f6b8d805f8ad9e32a54cd66e6
+
+나머지는 권장사항대로 진행한다.
+단, 보안 문제나 YGNI 같은 경우가 존재한다면 즉시 보고한다.
+```
+- AI 질문에 대한 사용자 선택: 빌드 기준선 "Boot 3.5.16 + Gradle 9.8.2", Java 대상 "Java 17 타깃", springdoc "유지".
+
+**③ AI 제안 핵심**
+- 명세에는 Spring Boot 버전 조건이 없고("3.x"는 초안 조건) JUnit 5가 필수다 → Boot 4.x(JUnit 6.0.3 관리)를 제외하고 3.5.16을 유지한다.
+- 실격 조건(README 명령으로 실행 불가)에 대비한다: Gradle 8.14는 JDK 25 이상에서 실행되지 않으므로 Wrapper 9.8.2를 유지하고, Java toolchain 21 대신 `release 17`로 컴파일한다. `JWT_SECRET`이 없으면 임의 키를 생성해 기동 실패를 없앤다(고정 키 없음).
+- 보안: 3.5 계열 OSS 종료 후 공개된 CVE의 전제 기능(임베디드 LDAP·`AesBytesEncryptor`·요청값 SpEL·네이티브 쿼리+요청 Sort)을 사용 금지로 규칙화하고, Tomcat은 OSS 패치 10.1.61로 올리며, JWT clock skew를 0으로 둔다.
+- YAGNI: JWT `iss` 제거, In Port 7개 → 2개, 선택 기능은 필수 완료 후 결정한다.
+
+**④ 확인 방법**
+- 명세: Notion 페이지가 JavaScript 렌더링이라 공개 API(`loadPageChunk`)로 블록 76개를 받아 텍스트로 변환했고, `docs/assignment-spec.md`에 원문을 보관했다.
+- Gradle 공식 호환표(Java 25 → Gradle 9.1.0 이상), Boot 4.1.2·3.5.16 BOM 비교(JUnit 6.0.3 vs 5.12.2).
+- spring.io 보안 권고(CVE-2026-59270·47842·47886·47834)의 영향 버전·전제 조건, Apache Tomcat 10.1 보안 페이지(10.1.56~10.1.61 수정 사항).
+- springdoc 2.8.17 소스: `ObjectMapperProvider`가 자체 `Json.mapper()`를 써서 전역 Jackson 네이밍 전략이 스키마에 반영되지 않는다.
+- Hibernate 6.6.53 소스: SQLite에서는 `@Column(unique = true)`만 CREATE TABLE에 인라인으로 생성되고 `@Table(uniqueConstraints)`는 생략된다.
+- 갱신한 문서 재점검: frontmatter 8개 파싱, D-01~D-14·요구사항 ID 교차 참조, 이전 결정 잔재 검색(`iss`·전역 SNAKE_CASE·toolchain 등), 구현 파일 수정 시각.
+
+**⑤ 오류·개선점**
+- AI 오류 정정: #1에서 "명세가 Spring Boot 3.x를 요구한다"고 기록했으나 원문에 없어 초안 조건으로 고쳤다. Gradle 8.14.6으로 내리려던 계획은 JDK 25 이상 채점 환경에서 실행되지 않는 문제가 있어 철회했다.
+- springdoc을 유지하면 전역 snake_case 설정이 문서와 실제 응답을 어긋나게 한다 → `access_token` 필드에만 `@JsonProperty`를 쓴다.
+- 명세는 프롬프트 기록을 "간단히" 요구한다 → #1에 넣었던 초안 전문(458줄)을 요지로 줄였다.
+
+**⑥ 반영** — `docs/assignment-spec.md` 추가, 체크리스트 출처를 명세·초안·설계로 구분, 결정 D-01·02·03·05·06·07·09·10·12·13 갱신과 D-14(선택 기능) 추가, `.claude/rules/build.md` 추가, `memory-bank/` 삭제(백업 후), `git init`(커밋 없음).
+
+---
+
+## #3 저장소 정리·원격 연결과 토큰 재발급 확장 설계
+
+**① 목적** — 2단계(저장소 정리)를 실행하고, 테이블 생성 경로 제약과 토큰 재발급 확장을 설계에 반영한다.
+
+**② 주요 프롬프트** (원문)
+```text
+### 내용
+1. 2단계 진행 하되, git 주소를 이와 같다. `https://github.com/manners-parkpro/jwt-todo-assignment.git`
+2. 테이블 생성은 README 명령어로만 생성되도록 제약한다.
+3. JWT_SECRET KEY 생성 형식은 채점자가 빠뜨려도 실행되는 안정성은 있고, 서버가 재시작 되면 토큰이 무효화가 되는거 까지 인지는 했지만, 토큰이 만료 되었을때에 재요청시 다시 발급하여API 호출이 가능하도록 확장 설계가 필요하다.
+```
+- AI 질문에 대한 사용자 선택: 리프레시 토큰 전달은 "응답 본문에 refresh_token 추가", 저장소는 "명세 사본 제외 후 커밋+푸시".
+
+**③ AI 제안 핵심**
+- 재발급: DB에 해시로 저장하는 불투명 리프레시 토큰(7일·회전·재사용 탐지)과 `POST /users/refresh`. 서명 키와 무관해서 임의 키로 재시작한 뒤에도 재발급된다. 공개 인증 경로는 Bearer 헤더를 무시해 만료 토큰을 단 요청도 재발급을 받는다.
+- 테이블 생성: 경로를 `ddl-auto` 하나로 제한하고 수동 SQL·`schema.sql`·DB 파일 제공·README의 SQL 명령을 금지하며, 클린 상태에서 검증한다.
+- 공개 저장소: 회사 과제 명세 사본은 `.gitignore`로 제외하고 로컬과 제출 ZIP에만 둔다.
+
+**④ 확인 방법**
+- RFC 9700 원문: §2.2.2(공개 클라이언트의 리프레시 토큰은 sender-constrained 또는 회전 필수), §4.14.2(무효화된 토큰이 제출되면 활성 토큰 폐기).
+- `git check-ignore -v`로 무시 규칙(`*.db`·`.env`·`.DS_Store`·로컬 설정·명세 사본)과 추적 대상(Wrapper jar·문서·소스)을 확인했다. `git ls-remote`와 GitHub API로 원격이 비어 있는 공개 저장소임을 확인했다.
+
+**⑤ 오류·개선점**
+- macOS에 `timeout` 명령이 없어 첫 원격 조회가 실패했다 → 대화형 프롬프트를 끈 `git ls-remote`로 다시 확인했다.
+- 재발급 흐름의 함정: 리소스 서버는 permitAll 경로에서도 Bearer 헤더를 검증해, 만료 토큰을 단 재발급 요청을 401로 막는다 → 공개 인증 경로 전용 `BearerTokenResolver`를 설계에 넣었다.
+- 공개 저장소에 명세 사본이 올라가는 문제를 발견해 제외했다.
+
+**⑥ 반영** — `.gitignore` 보강, `HELP.md`·빈 `static/`·`templates/` 삭제, origin 연결, 결정 D-15 추가와 D-03·06·07·10·13·14 갱신, rules·체크리스트·skill 갱신, 초기 커밋·푸시(사용자 승인).
