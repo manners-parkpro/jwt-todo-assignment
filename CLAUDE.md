@@ -8,7 +8,7 @@ JWT 인증이 적용된 TODO REST API 채용 과제다. 평가 기준은 요구�
 **우선순위: 과제 명세 > 이 문서 > `.claude/rules/`.** 충돌하면 명세를 따르고 `docs/decisions.md`에 기록한다. 명세 원문 사본은 `docs/assignment-spec.md`다(로컬 전용·공개 저장소 제외 — 없으면 체크리스트 상단의 출처에서 다시 수집).
 
 ## 기술 기준선 (근거 D-01·D-02·D-05·D-15)
-- **Java 17 타깃**(`options.release = 17`, toolchain 없음) — 명세 "Java 17 이상"의 어떤 JDK에서도 빌드되게 한다. 개발·검증은 JDK 21과 17
+- **Java 17 타깃**(`options.release = 17`, toolchain 없음) — 명세 "Java 17 이상"의 어떤 JDK에서도 빌드되게 한다. 검증은 JDK 17이 기본이고, 단계 완료·제출 전에 JDK 21로 교차 확인한다(채점 JDK 대비, D-01)
 - **Spring Boot 3.5.16** — 명세의 JUnit 5를 충족한다(4.x는 JUnit 6을 관리하므로 쓰지 않는다)
 - **Gradle Wrapper 9.8.2 유지** — JDK 17~26에서 실행된다(8.14는 JDK 25 이상에서 실행 불가)
 - Spring Data JPA · SQLite(`sqlite-jdbc` + `hibernate-community-dialects`) · JUnit 5
@@ -17,6 +17,7 @@ JWT 인증이 적용된 TODO REST API 채용 과제다. 평가 기준은 요구�
 
 ## 명령어
 ```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)           # 이 PC 기본 JDK는 21이므로 검증 전에 17로 맞춘다
 ./gradlew test                                              # 필수 테스트 (환경 변수 불필요)
 ./gradlew test --tests '*Todo*'                             # 일부 테스트만 실행
 ./gradlew clean build                                       # 최종 검증

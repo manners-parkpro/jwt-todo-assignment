@@ -3,10 +3,10 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-25
-- **단계: 3단계(빌드 기준선 교정) 완료 → 4단계 대기.** 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- **단계: 3단계 완료, 원격 푸시 완료(`98a2de2`) → 4단계 진행(사용자 승인).**
 - 빌드: Gradle 9.8.2 + Boot 3.5.16으로 JDK 17·21 모두 컴파일·`assemble` 성공. 테스트 실행은 데이터소스 설정 후(4단계) 한다.
-- **사용자 조치 필요**: 작성자 정보를 고친 로컬 커밋(`44dd876`과 그 뒤 커밋)을 원격에 반영하려면 force push가 필요하다. 자동 모드 분류기가 Claude의 force push를 거부했다(원격 기록 덮어쓰기). → 아래 S4 로그의 명령을 사용자가 실행한다.
-- 프롬프트 원문 백업 훅: 설정 완료(로컬). 실제 실행은 다음 프롬프트에서 `.claude/prompt-history.jsonl`에 `source: "hook"` 줄이 생기는지로 확인한다.
+- 원격: 사용자가 저장소를 재생성했고, 저장소 로컬 자격 증명 헬퍼(`gh auth token --user manners-parkpro`)로 푸시했다. 원격 커밋 작성자는 모두 noreply다.
+- 프롬프트 원문 백업 훅: 실제 프롬프트와 작업 중 메시지가 기록되는 것을 확인했다(S5).
 
 ## 다음 작업 (한 단계씩 — 단계마다 검증 결과 보고 후 사용자 확인)
 1. [x] 사용자 확인 사항 처리 — 명세 확보, D-01·D-02 결정, `memory-bank/` 삭제(백업), `git init`
@@ -24,12 +24,20 @@
 13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06·07
 
 ## 환경 메모
-- JDK: Corretto 21.0.10(기본), OpenJDK 17.0.18(`JAVA_HOME=$(/usr/libexec/java_home -v 17)`)로 두 버전 검증. 전역 Gradle 없음 → `./gradlew`만 사용
+- JDK: 이 PC 기본은 Corretto 21.0.10. 기본 검증은 OpenJDK 17.0.18(`JAVA_HOME=$(/usr/libexec/java_home -v 17)`), 단계 완료 시 21로 교차 확인. 전역 Gradle 없음 → `./gradlew`만 사용
 - sqlite3 3.51.0(macOS 기본), openssl·zip·unzip·jq 사용 가능. macOS에는 `timeout` 명령이 없다
-- Git: 브랜치 `main`, 원격 `origin` = https://github.com/manners-parkpro/jwt-todo-assignment.git (공개). 저장소 로컬 작성자 = `Colin <43167000+manners-parkpro@users.noreply.github.com>`. `docs/assignment-spec.md`, `.claude/settings.local.json`, `.claude/prompt-history.jsonl`은 `.gitignore`로 제외
+- Git: 브랜치 `main`, 원격 `origin` = https://github.com/manners-parkpro/jwt-todo-assignment.git (공개). 저장소 로컬 작성자 = `Colin <43167000+manners-parkpro@users.noreply.github.com>`. `docs/assignment-spec.md`, `.claude/settings.local.json`, `.claude/prompt-history.jsonl`은 `.gitignore`로 제외. 푸시 인증은 저장소 로컬 `credential.https://github.com.helper`가 `gh auth token --user manners-parkpro`를 사용(gh 활성 계정·전역 설정은 그대로)
 - 프롬프트 원문 백업: `.claude/hooks/log-prompt.py`(UserPromptSubmit 훅, 설정은 `.claude/settings.local.json`) → `.claude/prompt-history.jsonl`
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-25 · S5 저장소 재생성 확인, 푸시 계정 방식 검증, JDK 검증 정책
+- 확인: 재생성된 저장소는 처음에 비어 있었다(앞선 푸시 미반영). 이전 커밋 `52809a9` 조회 HTTP 409. 훅이 일반 프롬프트와 작업 중 메시지를 `source: "hook"`으로 기록함
+- 문제: `git push`가 403 — 전역 git 설정의 github.com 헬퍼가 gh CLI이고, gh 헬퍼는 활성 계정(다른 계정) 토큰만 반환(gh 2.90.0 소스 확인)
+- 검증: `git push --dry-run`으로 (A) 다른 계정에 권한 부여, (C) 저장소 로컬 헬퍼가 `gh auth token --user manners-parkpro` 사용 — 둘 다 성공. 원격 URL에 사용자명을 넣는 방식은 gh가 따르지 않아 되돌림
+- 결정(사용자): C안, JDK는 17 기본 + 단계 완료 시 21 교차 확인
+- 결과: `git push -u origin main` 성공, 원격 해시 = 로컬 `98a2de2`, 원격 커밋 3개 모두 noreply·manners-parkpro 연결(GitHub API). gh 활성 계정·전역 설정 변경 없음. 공개 이벤트 API의 푸시 계정은 반영 지연으로 아직 미확인
+- 다음: 4단계
 
 ### 2026-10-25 · S4 3단계 빌드 기준선 교정, 커밋 작성자 정정, 프롬프트 기록 보존
 - 완료:

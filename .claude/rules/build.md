@@ -24,8 +24,8 @@ paths:
 ## 검증
 ```bash
 ./gradlew --version                                                                   # Gradle 9.8.2
-JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew clean test --warning-mode all     # 명세 최소 JDK
-JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew clean build --warning-mode all
+JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew clean test --warning-mode all     # 기본 검증(명세 최소·타깃 JDK)
+JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew clean build --warning-mode all    # 단계 완료·제출 전 교차 확인
 ./gradlew dependencyInsight --dependency tomcat-embed-core --configuration runtimeClasspath   # 10.1.61
 javap -v -cp build/classes/java/main com.assignment.AssignmentApplication | grep 'major version'  # 61 = Java 17
 ```
