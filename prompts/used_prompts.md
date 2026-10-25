@@ -13,6 +13,7 @@
 | 5 | 2026-10-25 | 저장소 재생성 확인, 푸시 계정 방식 검증, JDK 검증 범위, 4단계 설정·테스트 기반 | 반영 |
 | 6 | 2026-10-25 | 압축 뒤 프롬프트 기록·CLAUDE.md 로드 검증, 설계 문서 리팩터링(독립 리뷰·best practices 대조), 강제 훅 추가 | 반영 |
 | 7 | 2026-10-25 | 사용자 참조 이름(userId vs ownerId) 검토·결정, 5단계 보안 골격(TEST-03) | 반영 |
+| 8 | 2026-10-25 | 6단계 설계 재검토와 회원가입·로그인·내 정보(TEST-01) | 반영 |
 
 ---
 
@@ -268,3 +269,30 @@ b. 통상적으로 userId 를 많이 사용하는데 ownerId 로 변경시 코�
 - 리뷰 지적: 기본 로그아웃 필터가 남아 `/logout`이 인증 없이 302를 돌려줬다(재현 확인) → 비활성화 후 401을 확인했다. 직접 추가한 "`detail`은 한국어" 규칙이 프레임워크 기본 메시지와 어긋났다 → 직접 작성하는 메시지로 범위를 좁혔다.
 
 **⑥ 반영** — `application.yaml`(`auth.jwt-secret`), `global.security`(`JwtConfig`·`SecurityConfig`·`ProblemDetailAuthenticationEntryPoint`), `global.error.GlobalExceptionHandler`, `AuthenticationRequiredTest`(TEST-03), rules·결정(D-08·D-10)·체크리스트·진행 문서.
+
+---
+
+## #8 6단계 설계 재검토와 회원가입·로그인·내 정보
+
+**① 목적** — 구현 전에 6단계 설계에 더 나은 방향이 있는지 라이브러리 소스로 검증하고, 회원가입·로그인(`access_token`만)·내 정보를 구현해 TEST-01로 확인한다.
+
+**② 주요 프롬프트** (원문)
+```text
+응 진행해줘.
+단, 진행 전 `좀더 좋은 방향 또는 설계가`있는지  `면밀히 검증하고 검토하고` 있다면 `즉시 보고하고 진행한다`.
+```
+
+**③ AI 제안 핵심** (구현 전 보고한 설계 개선)
+- 로그인 요청은 필수 여부만 검사한다 — bcrypt의 72바이트 예외는 인코딩(가입)에서만 나고 비교는 예외 없이 동작한다. 가입 규칙을 로그인에 적용하지 않는다.
+- 검증 메시지는 어노테이션에 고정한 한국어로 쓴다 — 기본 메시지는 요청 로캘·JVM 로캘에 따라 바뀌어 채점 환경마다 응답이 달라진다.
+- `PasswordEncoder`를 빈으로 두지 않고 해시 어댑터 안에서 만든다(문서 간 모순 해소). 어댑터 패키지 클래스는 package-private으로 둬 JPA 엔티티·DTO가 포트 밖으로 새는 것을 컴파일러가 막게 한다. 토큰은 유효하지만 사용자가 없는 `/users/me`는 404로 정했다.
+
+**④ 확인 방법**
+- Spring Security 6.5.11 소스: `BCrypt.hashpw`는 `for_check=false`(인코딩)일 때만 72바이트 초과 예외, `NimbusJwtEncoder`는 6.5.11에도 비밀 키 빌더가 없고 기본 헤더가 RS256. Spring MVC 6.2.19: `handleMethodArgumentNotValid` 재정의 지점, ProblemDetail `instance` 자동 채움.
+- 실행: JDK 17·21 `./gradlew clean build` 통과(9건 — TEST-01 포함). `bootRun` + curl: 가입 201·중복 409·검증 400(`errors`, 한글 31자 93바이트 거부)·잘못된 JSON 400, 로그인 200(`access_token`만)·틀린 비밀번호·없는 사용자·72바이트 초과 비밀번호 모두 같은 401, 토큰 헤더 HS256·클레임 `sub·iat·exp`·수명 3600초, DB 저장값 `{bcrypt}` 해시, 삭제된 사용자 404, 로그에 비밀번호·토큰 없음.
+- 독립 리뷰(`step-reviewer`): 지적 없음 — 설계 선택 5개를 명세·rules·바이트코드로 재확인했고, 문서 정합 2곳(API-03 404, 단계 문구)을 알려 줘 고쳤다.
+
+**⑤ 오류·개선점**
+- 처음 설계는 가입·로그인에 같은 비밀번호 검증을 두려 했다. 소스 확인으로 로그인에는 필요 없음을 확인하고 바꿨다.
+
+**⑥ 반영** — `user` 기능 전체(도메인, 포트, 서비스, 예외, 웹·영속성·보안 어댑터), `@CurrentUserId`, `JwtEncoder` 빈, `auth.access-token-ttl`, 검증 오류·기능 예외 매핑, `UserAuthFlowTest`(TEST-01), rules·결정(D-03·D-09)·체크리스트·진행 문서.

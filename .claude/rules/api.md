@@ -21,7 +21,7 @@ paths:
 |---|---|---|---|---|---|---|
 | API-01 | `POST /users/signup` | ✗ | `username`, `password` | 201 | `{id, username}` | 400, 409 |
 | API-02 | `POST /users/login` | ✗ | `username`, `password` | 200 | `{access_token}` → 8단계부터 `{access_token, refresh_token}` | 400, 401 |
-| API-03 | `GET /users/me` | ✓ | – | 200 | `{id, username}` | 401 |
+| API-03 | `GET /users/me` | ✓ | – | 200 | `{id, username}` | 401, 404(사용자 없음) |
 | API-11 | `POST /users/refresh` | ✗ | `refresh_token` | 200 | `{access_token, refresh_token}` | 400, 401 |
 | API-04 | `POST /todos` | ✓ | `title`, `description`(선택) | 201 + `Location: /todos/{id}` | Todo | 400, 401 |
 | API-05 | `GET /todos` | ✓ | – | 200 | `[Todo]` (내 것만, id 오름차순) | 401 |
@@ -30,7 +30,9 @@ paths:
 | API-08 | `DELETE /todos/{id}` | ✓ | – | 204 | – | 401, 404 |
 
 - Todo = `{id, title, description, completed}`. 생성 시 `completed`는 `false`. 비밀번호(해시)·소유자 정보·토큰 해시는 어떤 응답에도 넣지 않는다.
-- 입력 검증: `username` 필수·50자 이하 / `password` 8~64자·UTF-8 72바이트 이하 / `refresh_token` 필수 / `title` 필수·공백 불가·100자 이하 / `description` 1,000자 이하 / `completed`는 PUT에서 필수.
+- 입력 검증: 가입 `username` 필수·50자 이하, `password` 8~64자·UTF-8 72바이트 이하 / 로그인 `username`·`password` 필수(가입 규칙은 검사하지 않는다 — 틀리면 401) / `refresh_token` 필수 / `title` 필수·공백 불가·100자 이하 / `description` 1,000자 이하 / `completed`는 PUT에서 필수.
+- 검증 메시지는 어노테이션에 고정한 한국어로 쓴다 — 기본 메시지는 요청 `Accept-Language`·JVM 로캘에 따라 바뀐다. 실패 응답은 `errors: [{field, message}]`.
+- `GET /users/me`에서 토큰은 유효하지만 사용자가 없으면 404다.
 - 경로의 `{id}`가 숫자가 아니면 400.
 
 ## 구현 규칙

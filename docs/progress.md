@@ -3,8 +3,8 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-25
-- **단계: 5단계(보안 골격) 완료 → 6단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
-- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(8건 — contextLoads·TEST-03, S8). `bootRun`에서 보안 동작 확인(S8).
+- **단계: 6단계(User·Auth) 완료 → 7단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(9건 — contextLoads·TEST-01·TEST-03, S9). `bootRun`에서 가입·로그인·내 정보·오류 응답 확인(S9).
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
 - 지침·기록(S7): 압축 뒤 CLAUDE.md 전체 주입 확인. 로컬 훅 3개 — 프롬프트 원문 백업(하네스 메시지 제외), 지침 로드 기록, 커밋·푸시 검사(작성자·테스트·강제 푸시).
 
@@ -14,7 +14,7 @@
 3. [x] 빌드 기준선 교정 — `build.gradle` Boot 3.5.16·`release 17`·Tomcat 10.1.61·springdoc 2.8.17·Lombok main만 (검증: S4)
 4. [x] 설정과 테스트 베이스 — `application.yaml`(SQLite·JPA), `application-test.yaml`, `IntegrationTestSupport` (검증: S6). `auth.*`는 사용하는 코드와 함께 5단계로 조정
 5. [x] 보안 골격: `auth.jwt-secret`·SecurityConfig·서명 키와 JWT 디코더(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01 (검증: S8)
-6. [ ] User·Auth 필수 범위: `JwtEncoder`(HS256 헤더 명시)·`TokenIssuer`·`PasswordEncoder`·`@CurrentUserId`, 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06
+6. [x] User·Auth 필수 범위: `JwtEncoder`(HS256 헤더 명시)·`TokenIssuer`·비밀번호 해시 어댑터·`@CurrentUserId`, 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06 (검증: S9)
 7. [ ] Todo 기능 → TEST-02·04, 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인 — API-04~09, ERR-02·03, DB-02·03
 8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06
 9. [ ] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10
@@ -30,6 +30,16 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-25 · S9 6단계 설계 재검토와 User·Auth(TEST-01)
+- 설계 재검토(구현 전 보고): 로그인은 필수 여부만 검증(bcrypt 72바이트 예외는 인코딩에서만 — 6.5.11 소스), 검증 메시지 한국어 고정(로캘 의존 제거), `PasswordEncoder` 빈 없음(어댑터 내부), 어댑터 클래스 package-private, 사용자 없는 `/users/me` 404 — D-03·D-09·rules 반영
+- 구현: `user` 기능(도메인 `User`, 포트 `UserUseCase`·`AuthUseCase`·`UserRepository`·`PasswordHasher`·`TokenIssuer`, 서비스 2개, 예외 3개, 컨트롤러 2개·요청/응답 record·`@MaxUtf8Bytes`, JPA 엔티티·리포지토리·영속성 어댑터, `DelegatingPasswordHasher`·`JwtTokenIssuer`), `@CurrentUserId`, `JwtEncoder` 빈, `auth.access-token-ttl: 1h`, 검증 오류 `errors`·기능 예외 매핑, `UserAuthFlowTest`(TEST-01)
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew test` → 9건 통과(첫 실행에 통과), 도메인 순수성 grep 0건
+  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=9 failures=0, `todo.db` 없음
+  - bootRun + curl(JDK 17): 가입 201 `{id, username}`, 중복 409, 짧은 비밀번호·한글 31자(93바이트)·빈/51자 username → 400 `errors`(중복 항목 없음), 잘못된 JSON 400(프레임워크 기본 detail), 로그인 200 `{access_token}`만, 틀린 비밀번호·없는 사용자·72바이트 초과 비밀번호 → 같은 401 + `WWW-Authenticate: Bearer`, 빈 비밀번호 400, `/users/me` 200, 토큰 헤더 HS256·클레임 `exp·iat·sub`·`exp-iat=3600`, DB 저장값 `{bcrypt}$2a$10$…`(68자), `users` 스키마 `username varchar(50) not null unique`, 사용자 삭제 뒤 같은 토큰 404, 로그에 비밀번호·토큰 0건
+  - 독립 리뷰(`step-reviewer`): 지적 없음. 설계 선택 5개 모두 타당(bcrypt 경로를 바이트코드로 재확인). 문서 정합(API-03 404, 단계 문구) 반영. TEST-01만으로는 다중 사용자 분리를 증명하지 못한다는 주의 — 7단계 TEST-02·04와 10단계 TEST-X2로 확인
+- 다음: 사용자 확인 후 7단계
 
 ### 2026-10-25 · S8 사용자 참조 이름 결정(userId), 5단계 보안 골격
 - 결정: TODO의 사용자 참조를 `userId`·`user_id`로 통일(S7의 `owner_id` 철회 — Boot 3.5.16 기본 명명 전략 확인, D-10). 커밋 `eca0ee0`

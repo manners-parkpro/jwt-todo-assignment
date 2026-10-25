@@ -18,7 +18,7 @@ com.assignment
 │       ├── in/web                       # Controller(UserController, AuthController, TodoController), Request/Response DTO (record)
 │       └── out/persistence, out/security   # JPA 어댑터 / (user) 토큰 발급·비밀번호 해시 어댑터
 └── global
-    ├── security                         # SecurityFilterChain, JwtEncoder/Decoder·PasswordEncoder 빈, 공개 인증 경로용 BearerTokenResolver, EntryPoint, 현재 사용자 어노테이션
+    ├── security                         # SecurityFilterChain, 서명 키·JwtEncoder/Decoder 빈, 공개 인증 경로용 BearerTokenResolver, EntryPoint, @CurrentUserId
     ├── error                            # GlobalExceptionHandler (예외 → ProblemDetail)
     └── config                           # springdoc OpenAPI 설정
 ```
@@ -28,6 +28,7 @@ com.assignment
 - `application`: `domain`만 의존한다. 프레임워크는 `@Service`, `@Transactional`과 설정값을 받는 생성자 파라미터의 `@Value`(예: 리프레시 토큰 수명)만 허용하고 웹·JPA·Spring Data·Spring Security 타입은 쓰지 않는다.
 - `adapter.in.web`: `application.port.in`만 호출한다(응답 변환을 위해 `domain` 읽기는 가능). 서비스 구현체·리포지토리를 직접 호출하지 않는다.
 - `adapter.out.*`: `application.port.out`을 구현하고 `domain`을 사용한다. `global`은 공통 설정만 담고 기능 로직을 두지 않는다.
+- 어댑터 패키지(`adapter.*`)의 클래스(컨트롤러·DTO·JPA 엔티티·Spring Data 리포지토리·어댑터 구현)는 package-private으로 둔다 — 포트 밖에서 참조하면 컴파일 오류가 난다. 도메인·포트·서비스·기능 예외는 public이다.
 - 기능 간(`user` ↔ `todo`) 직접 참조 금지. TODO는 소유자를 `userId`(Long)로만 참조한다(집합체 간 ID 참조).
 
 ## 포트 정책

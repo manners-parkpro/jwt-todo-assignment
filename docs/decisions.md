@@ -49,7 +49,7 @@
 ### D-03 기능별 헥사고날 + 경량 DDD — 확정
 - **결정**: `user`, `todo` 패키지마다 `domain` / `application`(`port.in`, `port.out`, `service`) / `adapter`(`in.web`, `out.persistence`, `out.security`), 공통은 `global`(`security`, `error`, `config`). In Port는 책임별 인터페이스(`UserUseCase` 가입·내 정보, `AuthUseCase` 로그인·재발급, `TodoUseCase`), Out Port는 `UserRepository`·`TodoRepository`·`RefreshTokenRepository`·`PasswordHasher`·`TokenIssuer`. Command record는 파라미터가 많은 유스케이스에만 쓴다.
 - **근거**: 초안 §5 "저장소 및 외부 기능은 Port를 통해 접근", "도메인은 기술 세부사항에 직접 의존하지 않는다". 평가 기준 "코드를 읽기 쉬운가"와 초안의 "의미 없는 인터페이스 금지"에 따라 유스케이스별 인터페이스(9개) 대신 책임별 3개로 묶었다. 재발급 확장(D-15)으로 인증 책임이 커져 `AuthUseCase`를 계정 관리(`UserUseCase`)와 나눴다. 리프레시 토큰 생성·해시는 JDK 표준 API로 충분해 포트를 만들지 않는다.
-- **보완(S7)**: application 서비스의 설정값(예: 리프레시 토큰 수명)은 생성자 파라미터 `@Value`로 받는다(application에 허용하는 유일한 추가 Spring 어노테이션). 기능 예외는 각 기능의 `application`에 두고 `global.error.GlobalExceptionHandler`가 직접 참조한다(global → 기능 예외 의존만 허용). 독립 리뷰가 5~8단계에서 의존 규칙을 어기게 될 공백으로 지적했다.
+- **보완(S7)**: application 서비스의 설정값(예: 리프레시 토큰 수명)은 생성자 파라미터 `@Value`로 받는다(application에 허용하는 유일한 추가 Spring 어노테이션). 기능 예외는 각 기능의 `application`에 두고 `global.error.GlobalExceptionHandler`가 직접 참조한다(global → 기능 예외 의존만 허용). 독립 리뷰가 5~8단계에서 의존 규칙을 어기게 될 공백으로 지적했다. 어댑터 패키지의 클래스는 package-private으로 둬서 JPA 엔티티·DTO가 포트 밖으로 새는 것을 컴파일러가 막게 한다(S9 — Spring Data·Hibernate·Jackson·검증기가 package-private 클래스에서 동작함을 테스트로 확인).
 - **대안**: 유스케이스별 In Port(정석이지만 파일 증가) · In Port 생략(헥사고날 표현 약화).
 
 ### D-04 도메인 모델과 JPA 엔티티 분리, 집합체 간 ID 참조 — 확정
@@ -80,6 +80,7 @@
 ### D-09 비밀번호·로그인 정책 — 확정
 - **결정**: `DelegatingPasswordEncoder`(bcrypt). 비밀번호 8~64자 + UTF-8 72바이트 이하, username 중복은 409, 로그인 실패는 하나의 401 메시지.
 - **근거**: Spring Security 6.5.11 `BCrypt.java:615-616`이 72바이트 초과 시 `IllegalArgumentException("password cannot be more than 72 bytes")`을 던진다 → 검증하지 않으면 500(CVE-2025-22228 대응 이후 동작). 회원가입 409가 이미 계정 존재를 드러내므로 로그인 응답 시간 균등화(더미 해시 비교)는 하지 않는다(YAGNI). 메시지 통일은 비용이 없어 유지한다.
+- **보완(S9)**: 72바이트 예외는 인코딩(`for_check=false`)에서만 나고 비교는 예외 없이 동작하므로(6.5.11 소스), 로그인 요청은 필수 여부만 검사하고 가입 규칙(길이)은 적용하지 않는다 — 틀린 값은 401. 검증 메시지는 어노테이션에 고정한 한국어다(기본 메시지는 요청 로캘·JVM 로캘에 따라 달라 채점 환경마다 응답이 바뀐다). `PasswordEncoder`는 빈으로 등록하지 않고 해시 어댑터 안에서만 만든다(사용처가 하나).
 
 ### D-10 SQLite 영속성 — 확정(실측 조건)
 - **결정**: 테이블 생성 경로는 README 명령(`./gradlew bootRun`, `./gradlew test`)이 일으키는 Hibernate `ddl-auto` 하나다(앱 `update`, 테스트 `create-drop`). 수동 SQL·`schema.sql`·`data.sql`·마이그레이션 명령·미리 만든 DB 파일과 README의 SQL 명령을 금지한다(사용자 요청 2026-10-25). dialect 명시, `open-in-view: false`, Hikari `maximum-pool-size: 1`, DB 파일은 앱 `./todo.db`·테스트 `build/todo-test.db`. FK 대신 사용자 ID 컬럼(`todos.user_id`, `refresh_tokens.user_id`) 인덱스 + 애플리케이션 무결성, 유니크는 `@Column(unique = true)`. 사용자 ID 필드는 두 테이블 모두 `userId`다(S8 사용자 검토 — S7에 컬럼을 `owner_id`로 바꿨던 것을 되돌림: Boot 기본 명명 전략(`CamelCaseToUnderscoresNamingStrategy`, 3.5.16 jar 확인)이 두 이름 모두 어노테이션 없이 바꿔 주므로 매핑 이점은 같고, 관례·명세 용어("사용자 본인의 TODO")·JWT `sub`부터 저장소까지 같은 이름·`refresh_tokens`와의 일관성에서 `userId`가 낫다. `ownerId`의 이점은 사용자 관계가 여럿일 때의 구분인데 범위 밖이다). 컬럼 타입은 Long·String·boolean이고 시각은 epoch 밀리초 Long. 네이티브 쿼리·요청 Sort는 쓰지 않는다.

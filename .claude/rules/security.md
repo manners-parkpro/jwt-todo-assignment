@@ -30,8 +30,8 @@ paths:
 - 없는 토큰·만료·재사용은 구분하지 않고 같은 401·같은 메시지로 응답한다. 로그인할 때 그 사용자의 만료된 토큰 행을 정리한다.
 
 ## 비밀번호·로그인
-- `PasswordEncoderFactories.createDelegatingPasswordEncoder()`(기본 bcrypt)는 `PasswordHasher` 어댑터 안에서만 쓴다. 평문 저장 금지.
-- BCrypt는 72바이트를 넘는 비밀번호에 `IllegalArgumentException`을 던진다(Spring Security 6.5.11 `BCrypt.java`) → 요청 검증으로 8~64자 + UTF-8 72바이트 이하를 강제한다(미검증 시 500).
+- `PasswordEncoderFactories.createDelegatingPasswordEncoder()`(기본 bcrypt)는 `PasswordHasher` 어댑터 안에서만 만들어 쓰고 빈으로 등록하지 않는다. 평문 저장 금지.
+- BCrypt는 인코딩할 때 72바이트를 넘는 비밀번호에 `IllegalArgumentException`을 던진다(비교는 예외 없이 앞 72바이트로 한다 — Spring Security 6.5.11 `BCrypt.hashpw`의 `for_check`) → 가입 요청 검증으로 8~64자 + UTF-8 72바이트 이하를 강제한다(미검증 시 500).
 - 로그인 실패는 "없는 사용자"와 "비밀번호 불일치"를 구분하지 않고 같은 401·같은 메시지로 응답한다.
 
 ## 소유권
