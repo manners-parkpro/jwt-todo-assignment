@@ -7,11 +7,12 @@ paths:
 # 보안 규칙 (근거 D-01·D-05·D-06·D-08·D-09·D-15)
 
 ## 공통 보안 구성 — 인증 코드는 이곳 한 군데에만 둔다
-- `SecurityFilterChain`: CSRF 비활성(쿠키 없는 Bearer API), 세션 `STATELESS`, formLogin·httpBasic 비활성.
+- `SecurityFilterChain`: CSRF 비활성(쿠키 없는 Bearer API), 세션 `STATELESS`, formLogin·httpBasic·logout 비활성(기본 로그아웃 필터는 `/logout`을 인증 없이 302로 처리한다 — 5단계 리뷰에서 확인).
 - `permitAll`: `POST /users/signup`, `POST /users/login`, `POST /users/refresh`, `DispatcherType.ERROR`, Swagger(`/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**`). 나머지는 `anyRequest().authenticated()`.
   - ERROR 디스패치를 허용하지 않으면 400·500 응답이 401로 바뀐다(AuthorizationFilter가 모든 디스패치 유형에 적용된다).
 - 공개 인증 엔드포인트(가입·로그인·재발급)에서는 `Authorization` 헤더를 무시하는 `BearerTokenResolver`를 쓴다. 리소스 서버는 permitAll 경로에서도 헤더의 토큰을 검증하므로, 그대로 두면 만료 토큰이 실린 재발급 요청이 401로 막힌다.
 - `oauth2ResourceServer(...)`: 토큰 없음·무효·만료 → 401. EntryPoint는 `BearerTokenAuthenticationEntryPoint`에 먼저 위임해 상태 코드와 `WWW-Authenticate`를 유지한 뒤 ProblemDetail 본문을 쓴다.
+- 직접 만드는 요청 매처는 `PathPatternRequestMatcher`(6.5+)를 쓴다 — `AntPathRequestMatcher`는 제거 예정(`@Deprecated(forRemoval = true)`)이다. 문자열 `requestMatchers(...)`는 프레임워크가 매처를 고르므로 그대로 쓴다. 공개 엔드포인트 목록은 `SecurityConfig`의 매처 하나로 permitAll과 헤더 무시에 함께 쓴다(재발급 경로는 8단계에 추가).
 
 ## 액세스 토큰 (JWT, HS256)
 - 설정: `auth.jwt-secret: ${JWT_SECRET:}`, `auth.access-token-ttl: 1h`.

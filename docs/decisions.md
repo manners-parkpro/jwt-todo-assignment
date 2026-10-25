@@ -68,7 +68,7 @@
 - **대안**: 키 필수(fail-fast) — 운영 환경에는 더 엄격하지만 채점자가 설정을 빠뜨리면 기동이 실패하고 테스트 키 주입 코드가 필요하다. 테스트 프로파일에 더미 키 — 저장소에 키 문자열이 남는다.
 
 ### D-07 응답 규약 — 확정
-- **결정**: 로그인·재발급 응답은 `{"access_token": ..., "refresh_token": ...}`이고 두 필드에 `@JsonProperty`로 snake_case를 명시한다(사용자 결정 2026-10-25). 다른 필드는 모두 한 단어이며, 여러 단어 필드를 추가하면 같은 방식으로 명시한다. 오류는 RFC 9457 ProblemDetail(401 포함), 상태 코드는 `.claude/rules/api.md` 표(201+Location·200·204·400·401·404·409)를 따른다. 모든 401(토큰 오류·로그인·재발급 실패)에 `WWW-Authenticate: Bearer`를 넣는다(RFC 9110 §15.5.2 MUST — S7 보완). `@JsonProperty`는 응답뿐 아니라 재발급 요청 record에도 붙인다.
+- **결정**: 로그인·재발급 응답은 `{"access_token": ..., "refresh_token": ...}`이고 두 필드에 `@JsonProperty`로 snake_case를 명시한다(사용자 결정 2026-10-25). 다른 필드는 모두 한 단어이며, 여러 단어 필드를 추가하면 같은 방식으로 명시한다. 오류는 RFC 9457 ProblemDetail(401 포함), 상태 코드는 `.claude/rules/api.md` 표(201+Location·200·204·400·401·404·409)를 따른다. 모든 401(토큰 오류·로그인·재발급 실패)에 `WWW-Authenticate: Bearer`를 넣는다(RFC 9110 §15.5.2 MUST — S7 보완). `@JsonProperty`는 응답뿐 아니라 재발급 요청 record에도 붙인다. `detail`은 직접 작성하는 메시지만 한국어로 쓰고, Spring MVC 표준 예외의 기본 `detail`은 영문 그대로 둔다(S8 리뷰 — 초안·명세에 언어 조건이 없고 기본값에 내부 정보가 없음을 확인. 바꾸려면 `messages.properties`의 `problemDetail.<예외 클래스>` 코드를 쓴다).
 - **근거**: 명세의 `access_token` 표기를 그대로 지키고 확장 필드만 더한다(RFC 6749 §5.1 토큰 응답 관례). 전역 `SNAKE_CASE`는 springdoc 스키마에 반영되지 않아(D-02) 필드 단위 명시가 단순하고 정확하다. 초안 §3.5 "명세 외 응답은 프로젝트 전체에서 일관". ProblemDetail은 Spring Framework 6 내장이라 추가 의존성이 없다.
 - **대안**: 전역 SNAKE_CASE + springdoc용 `ModelResolver` 빈 — 설정이 두 곳으로 나뉜다. 리프레시 토큰을 HttpOnly 쿠키로 전달 — D-15 대안 참조.
 

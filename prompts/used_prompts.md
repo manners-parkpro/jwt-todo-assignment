@@ -12,6 +12,7 @@
 | 4 | 2026-10-25 | 빌드 기준선 교정, 커밋 작성자 정리, 프롬프트 기록 보존(훅·백필), 필수 테스트 보호 | 반영 |
 | 5 | 2026-10-25 | 저장소 재생성 확인, 푸시 계정 방식 검증, JDK 검증 범위, 4단계 설정·테스트 기반 | 반영 |
 | 6 | 2026-10-25 | 압축 뒤 프롬프트 기록·CLAUDE.md 로드 검증, 설계 문서 리팩터링(독립 리뷰·best practices 대조), 강제 훅 추가 | 반영 |
+| 7 | 2026-10-25 | 사용자 참조 이름(userId vs ownerId) 검토·결정, 5단계 보안 골격(TEST-03) | 반영 |
 
 ---
 
@@ -238,3 +239,32 @@ https://code.claude.com/docs/en/best-practices
 - AI 오진 정정: rules를 직접 읽은 뒤 규칙이 다시 주입되지 않자 처음엔 로드 실패로 봤으나, 새 컨텍스트 시험으로 중복 방지 동작임을 확인했다.
 
 **⑥ 반영** — 훅 추가(`log-instructions.py`, `guard-git.py`)와 `log-prompt.py` 보완, `.claude/agents/step-reviewer.md` 추가, CLAUDE.md·rules 6개·skill·체크리스트·결정(D-03·07·10·13·14·16 갱신, D-17~19 추가)·진행 문서 갱신.
+
+---
+
+## #7 사용자 참조 이름 결정과 5단계 보안 골격
+
+**① 목적** — #6에서 바꾼 TODO 소유자 컬럼 이름(`owner_id`)의 이점을 다시 검토해 결정하고, 5단계(보안 골격)를 구현·검증한다.
+
+**② 주요 프롬프트** (원문)
+```text
+b. 통상적으로 userId 를 많이 사용하는데 ownerId 로 변경시 코드나 가독성에 이점이 얻을만한 사항이 많은가?
+`면밀히 검토하고`보고한 뒤, 결정 후 5단계 진행하도록 하자.
+```
+
+**③ AI 제안 핵심**
+- `userId`로 통일한다. `ownerId`의 이점(소유 관계가 이름에 드러남, 사용자 관계가 여럿일 때 구분)은 이 과제에서 거의 없고, `userId`는 관례·명세 용어·JWT `sub`부터 저장소까지 같은 이름·`refresh_tokens`와의 일관성에서 낫다. #6의 근거(매핑 어노테이션 제거)는 필드를 `userId`로 맞춰도 똑같이 얻는다.
+- 5단계: `JWT_SECRET`이 없으면 임의 키, 형식 오류면 기동 실패. 디코더는 HS256·시계 오차 0. 401은 표준 엔트리 포인트에 위임한 뒤 ProblemDetail 본문을 쓰고, 가입·로그인 경로는 Bearer 헤더를 무시한다.
+
+**④ 확인 방법**
+- Boot 3.5.16 jar(`HibernateProperties$Naming`)에서 기본 물리 명명 전략이 `CamelCaseToUnderscoresNamingStrategy`임을 확인했다(`userId`→`user_id`, `ownerId`→`owner_id` 모두 어노테이션 불필요).
+- Spring Security 6.5.11 소스: `BearerTokenAuthenticationEntryPoint`는 본문 없이 `setStatus`만 한다, 무상태 세션은 `NullRequestCache`(세션 쿠키 없음), `AntPathRequestMatcher`는 제거 예정 → `PathPatternRequestMatcher`, 기본 검증기는 시계 오차 60초.
+- 실행: JDK 17·21 `./gradlew clean build` 통과(8건). `bootRun` + curl로 401 헤더·본문, 세션 쿠키 없음, 공개 경로의 헤더 무시, Swagger 200, 키 미설정 경고·형식 오류 기동 실패, 로그에 키 값 없음을 확인했다.
+- 독립 리뷰: `step-reviewer` 서브에이전트가 새 컨텍스트에서 변경분을 명세·rules·라이브러리 바이트코드와 대조했다 — 범위 내 결함 없음, 낮음 2건.
+
+**⑤ 오류·개선점**
+- AI 판단 정정: #6에서 필드·컬럼 불일치를 컬럼 쪽(`owner_id`)으로 맞췄으나, 관례와 일관성을 고려하면 필드를 `userId`로 맞추는 것이 맞았다.
+- 첫 컴파일 실패: 위임 대상 필드를 인터페이스 타입으로 선언해 검사 예외(`ServletException`)가 전파됐다 → 구체 타입으로 바꿨다.
+- 리뷰 지적: 기본 로그아웃 필터가 남아 `/logout`이 인증 없이 302를 돌려줬다(재현 확인) → 비활성화 후 401을 확인했다. 직접 추가한 "`detail`은 한국어" 규칙이 프레임워크 기본 메시지와 어긋났다 → 직접 작성하는 메시지로 범위를 좁혔다.
+
+**⑥ 반영** — `application.yaml`(`auth.jwt-secret`), `global.security`(`JwtConfig`·`SecurityConfig`·`ProblemDetailAuthenticationEntryPoint`), `global.error.GlobalExceptionHandler`, `AuthenticationRequiredTest`(TEST-03), rules·결정(D-08·D-10)·체크리스트·진행 문서.

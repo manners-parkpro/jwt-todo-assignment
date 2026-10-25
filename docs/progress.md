@@ -3,8 +3,8 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-25
-- **단계: 4단계(설정·테스트 기반) 완료 → 5단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
-- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(contextLoads, S7). `bootRun` 기동·정상 종료 확인(S6).
+- **단계: 5단계(보안 골격) 완료 → 6단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(8건 — contextLoads·TEST-03, S8). `bootRun`에서 보안 동작 확인(S8).
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
 - 지침·기록(S7): 압축 뒤 CLAUDE.md 전체 주입 확인. 로컬 훅 3개 — 프롬프트 원문 백업(하네스 메시지 제외), 지침 로드 기록, 커밋·푸시 검사(작성자·테스트·강제 푸시).
 
@@ -13,10 +13,10 @@
 2. [x] 저장소 정리·원격 연결 — `.gitignore` 보강, Initializr 잔여물 삭제, origin 연결
 3. [x] 빌드 기준선 교정 — `build.gradle` Boot 3.5.16·`release 17`·Tomcat 10.1.61·springdoc 2.8.17·Lombok main만 (검증: S4)
 4. [x] 설정과 테스트 베이스 — `application.yaml`(SQLite·JPA), `application-test.yaml`, `IntegrationTestSupport` (검증: S6). `auth.*`는 사용하는 코드와 함께 5단계로 조정
-5. [ ] 보안 골격: `auth.*` 설정·SecurityConfig·JWT 빈(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01
-6. [ ] User·Auth 필수 범위: 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06
+5. [x] 보안 골격: `auth.jwt-secret`·SecurityConfig·서명 키와 JWT 디코더(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01 (검증: S8)
+6. [ ] User·Auth 필수 범위: `JwtEncoder`(HS256 헤더 명시)·`TokenIssuer`·`PasswordEncoder`·`@CurrentUserId`, 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06
 7. [ ] Todo 기능 → TEST-02·04, 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인 — API-04~09, ERR-02·03, DB-02·03
-8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지) → TEST-07·08 + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06
+8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06
 9. [ ] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10
 10. [ ] 선택 테스트 TEST-X1~X4, 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
 11. [ ] 선택 기능 OPT-01~03 결정(구현하면 테스트 포함) — D-14
@@ -30,6 +30,19 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-25 · S8 사용자 참조 이름 결정(userId), 5단계 보안 골격
+- 결정: TODO의 사용자 참조를 `userId`·`user_id`로 통일(S7의 `owner_id` 철회 — Boot 3.5.16 기본 명명 전략 확인, D-10). 커밋 `eca0ee0`
+- 구현: `auth.jwt-secret`, `JwtConfig`(미설정 시 임의 키 + WARN, Base64·32바이트 검증, HS256 디코더·시계 오차 0), `SecurityConfig`(CSRF·폼 로그인·Basic·로그아웃 비활성, STATELESS, ERROR 디스패치·가입·로그인·Swagger permitAll, 공개 경로 Bearer 헤더 무시), `ProblemDetailAuthenticationEntryPoint`, `GlobalExceptionHandler`, `AuthenticationRequiredTest`(TEST-03)
+- 범위 조정: `JwtEncoder`·`PasswordEncoder`·`@CurrentUserId`는 쓰는 코드와 함께 6단계, `/users/refresh`는 8단계로(문서 반영)
+- 실행 명령과 결과:
+  - Spring Security 6.5.11 소스: 엔트리 포인트는 `setStatus`만(본문 없음), STATELESS → `NullRequestCache`, `AntPathRequestMatcher` 제거 예정 → `PathPatternRequestMatcher`, 기본 시계 오차 60초
+  - 첫 `./gradlew test` 컴파일 실패(위임 필드를 인터페이스 타입으로 선언해 `ServletException` 전파) → 구체 타입으로 수정
+  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=8 failures=0, `todo.db` 없음
+  - bootRun + curl(JDK 17): 토큰 없음 401 `WWW-Authenticate: Bearer`·ProblemDetail, 형식 오류 토큰 401 `invalid_token`, Basic 헤더 401, 세션 쿠키 없음, `POST /users/login` + 엉터리 Bearer → 404 ProblemDetail(헤더 무시), `/v3/api-docs` 200, 키 미설정 WARN, Base64 아님·16바이트 키 → 기동 실패(로그에 키 값 없음), 32바이트 키 → 경고 없음
+  - 독립 리뷰(`step-reviewer` 첫 사용): 범위 내 결함 없음, 낮음 2건 — 기본 로그아웃 필터가 `/logout`을 인증 없이 302 처리(재현 후 `logout` 비활성 → 401 확인), `detail` 언어 규칙과 프레임워크 기본값 불일치(규칙을 직접 작성하는 detail로 한정, D-07). 근거 로그·문구 정확성 지적도 반영
+- 실수: 스모크 스크립트가 라벨을 curl 인자로 넘겨 출력 순서가 섞임(표시된 상태·헤더·본문은 실제 요청 결과)
+- 다음: 사용자 확인 후 6단계
 
 ### 2026-10-25 · S7 압축 뒤 점검 — 프롬프트 기록·CLAUDE.md 로드 검증, 설계 문서 리팩터링(독립 리뷰·best practices 대조)
 - 확인(프롬프트): 백업 15줄과 `used_prompts` 대조 — 사용자 프롬프트 누락 0건(#1~#5에 원문, 계정명 가림·초안은 요지), 이번 프롬프트는 #6. 압축 뒤 첫 프롬프트도 훅이 기록. 비사용자 줄 5건: `/effort`, `<task-notification>` 2, `<agent-message` 2

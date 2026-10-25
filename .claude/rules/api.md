@@ -13,6 +13,7 @@ paths:
 - 인증 헤더는 `Authorization: Bearer <access_token>`. 액세스 토큰이 만료되면 클라이언트는 `POST /users/refresh`로 새 토큰 쌍을 받고 원래 요청을 다시 보낸다.
 - 오류 본문은 RFC 9457 ProblemDetail(`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`(검증 실패 시 `errors` 추가). 모든 401(토큰 없음·무효·만료, 로그인·재발급 실패)은 같은 형식에 `WWW-Authenticate: Bearer` 헤더를 넣는다(RFC 9110 §15.5.2 MUST).
 - 상태 코드: 검증 실패 400 · 인증 실패 401 · 리소스 없음/타인 소유 404 · username 중복 409.
+- 직접 작성하는 `detail`(인증 실패·기능 예외·검증 메시지)은 한국어로 쓴다. Spring MVC 표준 예외의 기본 `detail`(읽을 수 없는 본문·타입 불일치·없는 경로 등)은 영문 그대로 둔다(D-07). 어떤 `detail`에도 내부 정보(스택 트레이스·SQL·토큰·키)를 넣지 않는다.
 - API 문서: `/swagger-ui.html`(springdoc). `@SecurityRequirement`는 보호 API에만 붙인다(가입·로그인·재발급 제외).
 
 ## 엔드포인트

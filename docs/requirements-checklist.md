@@ -37,25 +37,25 @@
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
 | SEC-01 | 로그인 성공 시 `{ "access_token": "..." }` 포함 | 명세 인증 | user web | TEST-01 | ⬜ |
-| SEC-02 | 인증 헤더 `Authorization: Bearer <token>` | 명세 인증 | `global.security` | TEST-01·03 | ⬜ |
+| SEC-02 | 인증 헤더 `Authorization: Bearer <token>` | 명세 인증 | `global.security` | TEST-01·03 | 🟨 Bearer 리소스 서버 구성, 헤더 없음·형식 오류 401(TEST-03, S8). 유효 토큰 통과는 6단계 TEST-01 |
 | SEC-03 | 액세스 토큰 만료 시간(1시간)·README 명시 (Refresh Token은 명세상 선택 → SEC-11로 구현) | 명세 인증·초안·D-06 | `auth.access-token-ttl` | 설정·README | ⬜ |
-| SEC-04 | 토큰 없이 요청하면 401 | 명세 테스트 | `global.security` | TEST-03 | ⬜ |
+| SEC-04 | 토큰 없이 요청하면 401 | 명세 테스트 | `global.security` | TEST-03 | ✅ 보호 경로 6개(핸들러는 6·7단계) 토큰 없음 401(TEST-03, S8 JDK 17·21) |
 | SEC-05 | 무효·만료 토큰 → 401 (clock skew 0) | 초안·D-05 | `JwtDecoder` | TEST-X1, TEST-07 | ⬜ |
 | SEC-06 | 비밀번호 평문 저장 금지 (DelegatingPasswordEncoder) | 초안·D-09 | `PasswordHasher` 어댑터 | DB 값이 `{bcrypt}` 접두 해시인지 확인 | ⬜ |
-| SEC-07 | 서명 키 하드코딩 금지(미설정 시 임의 키 생성)·README 설명 | 초안·D-06 | `application.yaml`, JWT 설정 | grep 점검, README | ⬜ |
-| SEC-08 | 인증 로직은 공통 보안 구성 (컨트롤러별 중복 금지) | 초안 | `SecurityFilterChain` | 코드 리뷰 | ⬜ |
+| SEC-07 | 서명 키 하드코딩 금지(미설정 시 임의 키 생성)·README 설명 | 초안·D-06 | `application.yaml`, JWT 설정 | grep 점검, README | 🟨 `JwtConfig` — 미설정 시 임의 키+WARN, Base64 아님·32바이트 미만은 기동 실패, 로그에 키 값 없음(S8 bootRun). README 설명은 12단계 |
+| SEC-08 | 인증 로직은 공통 보안 구성 (컨트롤러별 중복 금지) | 초안 | `SecurityFilterChain` | 코드 리뷰 | 🟨 `global.security.SecurityConfig` 하나로 구성(S8). 컨트롤러 추가 후 재확인 |
 | SEC-09 | 응답·예외·로그에 비밀번호·키·토큰·민감정보 비노출 | 초안 | 전역 | 응답·로그 확인 | ⬜ |
 | SEC-10 | OSS 종료 계열 CVE의 전제 기능 미사용 | 설계·D-01 | 전역 | grep 점검(submission-check) | ⬜ |
 | SEC-11 | 리프레시 토큰: 불투명 32바이트·SHA-256 해시 저장·7일 만료·회전·재사용 탐지 | 요청·D-15 | user(Auth), `refresh_tokens` | TEST-08, DB에 원문 없음 확인 | ⬜ |
-| SEC-12 | 공개 인증 엔드포인트는 `Authorization` 헤더를 무시(만료 토큰을 단 재발급 허용) | 설계·D-15 | `BearerTokenResolver` | TEST-07 | ⬜ |
+| SEC-12 | 공개 인증 엔드포인트는 `Authorization` 헤더를 무시(만료 토큰을 단 재발급 허용) | 설계·D-15 | `BearerTokenResolver` | TEST-07 | 🟨 가입·로그인 경로는 엉터리 Bearer 헤더에도 401이 아님(S8 bootRun — 미구현 경로라 404). `/users/refresh`는 8단계, TEST-07 |
 
 ## 4. 상태 코드·예외 (ERR)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| ERR-01 | 인증 없이 보호 API 호출 → 401 | 명세 테스트 | `global.security` | TEST-03 | ⬜ |
+| ERR-01 | 인증 없이 보호 API 호출 → 401 | 명세 테스트 | `global.security` | TEST-03 | ✅ ProblemDetail 401 + `WWW-Authenticate: Bearer`(TEST-03, S8) |
 | ERR-02 | 존재하지 않는 TODO ID → 404 | 명세 테스트 | todo, `global.error` | TEST-04 | ⬜ |
 | ERR-03 | 성공 코드: 생성 201 · 조회 200 · 수정 200 · 삭제 204 | 초안·D-07 | 컨트롤러 | TEST-01·02 | ⬜ |
-| ERR-04 | 명세 외 응답 형식·상태 코드의 일관성(ProblemDetail, 400·409) | 초안·D-07 | `global.error` | TEST-X3·X4 | ⬜ |
+| ERR-04 | 명세 외 응답 형식·상태 코드의 일관성(ProblemDetail, 400·409) | 초안·D-07 | `global.error` | TEST-X3·X4 | 🟨 401·404가 ProblemDetail로 응답(S8). 400·409는 6·7단계, 검증은 10단계 |
 
 ## 5. DB (DB)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -72,9 +72,9 @@
 |---|---|---|---|---|---|
 | TEST-01 | 회원가입 → 로그인 → 발급받은 토큰으로 `/users/me` 조회 성공 | 명세 테스트 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-02 | TODO 생성 → 목록 조회 → 수정 → 삭제 | 명세 테스트 | `src/test` | `./gradlew test` | ⬜ |
-| TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ⬜ |
+| TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ✅ `AuthenticationRequiredTest` — 보호 경로 6개(핸들러는 6·7단계) 토큰 없음·형식 오류 토큰 401, ProblemDetail·`WWW-Authenticate` 검증(S8, JDK 17·21 7건 통과) |
 | TEST-04 | 존재하지 않는 TODO ID로 요청하면 404 | 명세 테스트 | `src/test` | `./gradlew test` | ⬜ |
-| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(contextLoads, S6) — 필수 테스트는 이후 단계 |
+| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S8: 8건 통과 — contextLoads·TEST-03) — 나머지 필수 테스트는 6·7단계 |
 | TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ⬜ |
 | TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ⬜ |
