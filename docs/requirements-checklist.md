@@ -9,11 +9,11 @@
 ## 1. 기술·실행 (TECH)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | 🟨 JDK 17·21 컴파일·assemble 성공, class 61(S4) — test는 4단계 |
+| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ✅ JDK 17·21에서 컴파일·테스트 통과, class 61(S4·S6) |
 | TECH-02 | Spring Boot 3.5.16 | 초안·D-01 | `build.gradle` | `./gradlew dependencies` | ✅ spring-boot 3.5.16 해석 확인(S4) |
-| TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | 🟨 JDK 17·21에서 빌드 성공, deprecation 경고 1건(Gradle 11 제거 예정)(S4) — test는 4단계 |
-| TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | ⬜ |
-| TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | 🟨 junit-jupiter 5.12.2 해석 확인(S4) — 실행은 4단계 |
+| TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | ✅ Gradle 9.8.2 + Boot 3.5.16, JDK 17·21에서 build·test 통과(S4·S6). deprecation 경고 1건(Gradle 11 제거 예정) |
+| TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | 🟨 bootRun 기동·SQLite 3.49.1 인식(S6) — CRUD는 7단계 |
+| TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | ✅ JUnit 5.12.2로 테스트 실행(S6) |
 | TECH-06 | 테이블은 README 명령만으로 생성 — 생성 경로는 `ddl-auto` 하나(수동 SQL·`schema.sql`·DB 파일 제공 금지), README에 SQL 명령 없음 | 명세 기술 조건·요청·D-10 | `application.yaml` | `todo.db`를 지운 클린 상태에서 README 명령만 실행 후 `.schema` | ⬜ |
 | TECH-07 | **⚠ 실격** README에 적힌 명령어로 실행·테스트 가능 | 명세 실격 조건 | `README.md` | README 순서대로 클린 실행 | ⬜ |
 | TECH-08 | 내장 Tomcat 보안 패치 버전(10.1.61) 오버라이드 | 설계·D-01 | `build.gradle` | `dependencyInsight` | ✅ 10.1.55 → 10.1.61 selected by rule(S4) |
@@ -60,10 +60,10 @@
 ## 5. DB (DB)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| DB-01 | `sqlite-jdbc`·`hibernate-community-dialects` 의존성, dialect `SQLiteDialect`, `ddl-auto: update` | 명세 SQLite 설정 참고 | `build.gradle`, `application.yaml` | 기동 로그, `./gradlew dependencies` | 🟨 의존성 3.49.1.0·6.6.53.Final 확인(S4) — dialect·ddl-auto 설정은 4단계 |
+| DB-01 | `sqlite-jdbc`·`hibernate-community-dialects` 의존성, dialect `SQLiteDialect`, `ddl-auto: update` | 명세 SQLite 설정 참고 | `build.gradle`, `application.yaml` | 기동 로그, `./gradlew dependencies` | ✅ 의존성·dialect·`ddl-auto: update` 설정, bootRun 기동(S4·S6) |
 | DB-02 | SQLite에서 생성·조회·수정·삭제 실제 동작 | 초안 | persistence 어댑터 | TEST-02 | ⬜ |
 | DB-03 | 테이블·관계(FK 미생성 대응): `users`(username `unique`), `todos`(`user_id` 인덱스), `refresh_tokens`(`token_hash` `unique`) | 초안·요청·D-04·D-10 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ⬜ |
-| DB-04 | 개발 DB와 테스트 DB 분리 | 초안·D-10 | `todo.db` / `build/todo-test.db` | 테스트 후 `todo.db` 미변경 | ⬜ |
+| DB-04 | 개발 DB와 테스트 DB 분리 | 초안·D-10 | `todo.db` / `build/todo-test.db` | 테스트 후 `todo.db` 미변경 | ✅ 테스트는 `build/todo-test.db` 사용, 실행 후 `todo.db` 미생성(S6, JDK 17·21) |
 | DB-05 | `*.db` 커밋·제출 제외 | 명세 제출물 | `.gitignore`, ZIP | `git check-ignore`, `unzip -l` | 🟨 `.gitignore` 검증 완료(2026-10-25), ZIP 미검증 |
 
 ## 6. 테스트 (TEST)
@@ -73,7 +73,7 @@
 | TEST-02 | TODO 생성 → 목록 조회 → 수정 → 삭제 | 명세 테스트 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-04 | 존재하지 않는 TODO ID로 요청하면 404 | 명세 테스트 | `src/test` | `./gradlew test` | ⬜ |
-| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | ⬜ |
+| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(contextLoads, S6) — 필수 테스트는 이후 단계 |
 | TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ⬜ |
 | TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ⬜ |
@@ -115,9 +115,9 @@
 ## 9. 미해결·위험
 | ID | 내용 | 조치 |
 |---|---|---|
-| R-1 | Boot 3.5.16 + Gradle 9.8.2는 공식 지원 목록 밖 | 기준선 단계에서 JDK 17·21로 실측. 실패하면 8.14.6으로 폴백하고 README에 "JDK 17~24" 명시 |
+| R-1 | Boot 3.5.16 + Gradle 9.8.2는 공식 지원 목록 밖 | 해결(S6): JDK 17·21에서 build·test 통과 — 폴백 불필요 |
 | R-2 | Boot 3.5 OSS 종료 — 엔터프라이즈 전용으로만 수정된 CVE 존재(전제 기능 미사용으로 비해당) | SEC-10 유지, Tomcat은 OSS 패치 반영(TECH-08) |
-| R-3 | Hikari 풀 1개 설정의 실제 동작 미검증 | 기동·테스트로 확인 |
+| R-3 | Hikari 풀 1개 설정의 실제 동작 미검증 | 기동·contextLoads에서 연결 문제 없음(S6). 요청 처리 중 동작은 7단계 이후 확인 |
 | R-4 | springdoc 스키마와 실제 응답 표기 일치 여부 | `/v3/api-docs`에서 `access_token`·`refresh_token` 확인 |
 | R-5 | 원격 저장소가 공개 — 비밀·명세 사본이 올라가면 안 됨 | 커밋 전 `git status`·`check-ignore` 확인, 비밀은 저장소에 두지 않음(SEC-07) |
 | R-6 | 원격에 회사 도메인 이메일이 담긴 커밋 `52809a9`가 남아 있음. force push 뒤에도 GitHub는 SHA로 접근 가능한 캐시를 남길 수 있음(GitHub 문서) | 해결(S5): 저장소 재생성, 이전 커밋 조회 시 HTTP 409 |

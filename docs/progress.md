@@ -3,8 +3,8 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-25
-- **단계: 3단계 완료, 원격 푸시 완료(`98a2de2`) → 4단계 진행(사용자 승인).**
-- 빌드: Gradle 9.8.2 + Boot 3.5.16으로 JDK 17·21 모두 컴파일·`assemble` 성공. 테스트 실행은 데이터소스 설정 후(4단계) 한다.
+- **단계: 4단계(설정·테스트 기반) 완료 → 5단계 대기.** 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean test` 통과(contextLoads). `bootRun` 기동·정상 종료 확인.
 - 원격: 사용자가 저장소를 재생성했고, 저장소 로컬 자격 증명 헬퍼(`gh auth token --user manners-parkpro`)로 푸시했다. 원격 커밋 작성자는 모두 noreply다.
 - 프롬프트 원문 백업 훅: 실제 프롬프트와 작업 중 메시지가 기록되는 것을 확인했다(S5).
 
@@ -12,8 +12,8 @@
 1. [x] 사용자 확인 사항 처리 — 명세 확보, D-01·D-02 결정, `memory-bank/` 삭제(백업), `git init`
 2. [x] 저장소 정리·원격 연결 — `.gitignore` 보강, Initializr 잔여물 삭제, origin 연결
 3. [x] 빌드 기준선 교정 — `build.gradle` Boot 3.5.16·`release 17`·Tomcat 10.1.61·springdoc 2.8.17·Lombok main만 (검증: S4)
-4. [ ] 설정과 테스트 베이스: `application.yaml`(SQLite·JPA·`auth.*`), `application-test.yaml`, `IntegrationTestSupport` → JDK 17·21에서 `./gradlew clean test --warning-mode all`(contextLoads) — TECH-03·05 테스트 부분, TEST-05, DB-01 설정, DB-04
-5. [ ] 보안 골격: SecurityConfig·JWT 빈(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01
+4. [x] 설정과 테스트 베이스 — `application.yaml`(SQLite·JPA), `application-test.yaml`, `IntegrationTestSupport` (검증: S6). `auth.*`는 사용하는 코드와 함께 5단계로 조정
+5. [ ] 보안 골격: `auth.*` 설정·SecurityConfig·JWT 빈(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01
 6. [ ] User·Auth 필수 범위: 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06
 7. [ ] Todo 기능 → TEST-02·04, 클린 상태에서 README 명령만으로 `.schema` 확인 — API-04~09, ERR-02~04, DB-02·03, TECH-06
 8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지) → TEST-07·08 + **TEST-01~04 회귀** — API-11, SEC-11
@@ -30,6 +30,17 @@
 - 프롬프트 원문 백업: `.claude/hooks/log-prompt.py`(UserPromptSubmit 훅, 설정은 `.claude/settings.local.json`) → `.claude/prompt-history.jsonl`
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-25 · S6 4단계 설정과 테스트 기반
+- 완료: `application.yaml`(SQLite `todo.db`, Hikari 풀 1, SQLiteDialect, `ddl-auto: update`, `open-in-view: false`), `src/test/resources/application-test.yaml`(`build/todo-test.db`, `create-drop`), `IntegrationTestSupport`(`@SpringBootTest`·`@AutoConfigureMockMvc`·`@ActiveProfiles("test")`), `AssignmentApplicationTests`가 베이스 상속. `auth.*` 설정은 쓰는 코드와 함께 5단계로 옮김(쓰이지 않는 설정 방지)
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew clean test --warning-mode all` → BUILD SUCCESSFUL, tests=1 failures=0 errors=0. Hibernate 6.6.53, SQLite 3.49.1 인식, HikariPool-1 시작. 실행 전후 `todo.db` 없음(테스트는 `build/todo-test.db`)
+  - JDK 17 `./gradlew bootRun` → Started AssignmentApplication(약 3.8초), Tomcat 10.1.61, `GET /` 401(보안 설정 전 기본 동작), `todo.db` 생성·git 무시 확인 후 삭제
+  - SIGTERM 종료 → graceful shutdown·JPA·Hikari 종료 정상. Gradle은 종료 코드 143(SIGTERM)을 빌드 실패로 보고 — 백그라운드 작업 종료 코드 1의 원인이며 정상
+  - JDK 21 `./gradlew clean test` → BUILD SUCCESSFUL, tests=1, `todo.db` 없음
+  - WARN: springdoc 문서 엔드포인트 기본 활성 안내 2건(의도된 유지 — 9단계 springdoc 설정 때 처리 검토)
+- 실수: `bootRun` 로그를 `build/`에 저장해 이어진 `clean`이 지웠다 → 스크래치패드에 로그를 두고 재현해 종료 과정을 확인
+- 다음: 사용자 확인 후 5단계
 
 ### 2026-10-25 · S5 저장소 재생성 확인, 푸시 계정 방식 검증, JDK 검증 정책
 - 확인: 재생성된 저장소는 처음에 비어 있었다(앞선 푸시 미반영). 이전 커밋 `52809a9` 조회 HTTP 409. 훅이 일반 프롬프트와 작업 중 메시지를 `source: "hook"`으로 기록함

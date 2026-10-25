@@ -6,7 +6,7 @@
 
 | ID | 결정 | 상태 |
 |---|---|---|
-| D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 | 확정(실측 조건) |
+| D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 | 확정 |
 | D-02 | Lombok·springdoc 유지와 사용 범위 | 확정 |
 | D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정 |
 | D-04 | 도메인 모델·JPA 엔티티 분리, 집합체 간 ID 참조 | 확정 |
@@ -25,7 +25,7 @@
 
 ---
 
-### D-01 빌드 기준선 — 확정(실측 조건)
+### D-01 빌드 기준선 — 확정
 - **결정**: Spring Boot **3.5.16**, Gradle Wrapper **9.8.2 유지**, Java **17 타깃**(`options.release = 17`, toolchain 없음), Tomcat **10.1.61** 오버라이드. (사용자 결정 2026-10-25)
 - **근거**:
   - 명세 조건은 Java 17 이상·JUnit 5·Gradle/Maven이며 Spring Boot 버전 조건은 없다("3.x"는 초안 조건). Boot 4.1.2 BOM은 JUnit Jupiter 6.0.3, Boot 3.5.16 BOM은 5.12.2를 관리한다 → 3.5.16.
@@ -34,7 +34,7 @@
   - 보안: 3.5 계열 OSS 지원은 2026-06-30 종료. 이후 공개된 CVE-2026-59270(임베디드 UnboundID LDAP)·CVE-2026-47842(`AesBytesEncryptor`)·CVE-2026-47886(신뢰할 수 없는 SpEL 평가)·CVE-2026-47834(Spring Data JPA 3.5.13, 네이티브 쿼리+요청 Sort)은 3.x/6.x 계열 수정이 엔터프라이즈 전용이지만, 전제 기능을 쓰지 않는다(spring.io 권고의 조건 확인) → `security.md` 사용 금지 기능으로 고정. Tomcat 10.1.56~10.1.61에는 Apache의 OSS 보안 수정이 있으므로 버전만 올린다.
 - **대안**: Boot 3.5.16 + Gradle 8.14.6(공식 조합, JDK 25 이상에서 실행 불가) · Boot 4.1.2(지속 패치, JUnit 6이라 명세와 불일치) · Java 21 toolchain(채점 환경에 JDK 21 필요).
 - **실측 계획**: JDK 17·21로 `./gradlew clean test/build --warning-mode all`, class major 61, `dependencyInsight tomcat-embed-core`. 실패하면 8.14.6으로 폴백하고 README에 "JDK 17~24"를 명시한다.
-- **실측 결과(3단계, 2026-10-25)**: Gradle 9.8.2 + Boot 3.5.16으로 JDK 21·17 모두 `clean compileJava compileTestJava assemble`(bootJar 포함) 성공, class major 61. 해석된 버전 — spring-boot 3.5.16, spring-core 6.2.19, spring-security-oauth2-jose 6.5.11, hibernate-core·community-dialects 6.6.53.Final, sqlite-jdbc 3.49.1.0, tomcat-embed-core 10.1.61(rule로 선택), springdoc 2.8.17, junit-jupiter 5.12.2. Boot 플러그인(`JavaPluginAction`)이 `Configuration.setVisible`을 써서 deprecation 경고 1건(Gradle 11 제거 예정 — 9.x 영향 없음). 테스트 실행 검증은 4단계에서 한다.
+- **실측 결과(3단계, 2026-10-25)**: Gradle 9.8.2 + Boot 3.5.16으로 JDK 21·17 모두 `clean compileJava compileTestJava assemble`(bootJar 포함) 성공, class major 61. 해석된 버전 — spring-boot 3.5.16, spring-core 6.2.19, spring-security-oauth2-jose 6.5.11, hibernate-core·community-dialects 6.6.53.Final, sqlite-jdbc 3.49.1.0, tomcat-embed-core 10.1.61(rule로 선택), springdoc 2.8.17, junit-jupiter 5.12.2. Boot 플러그인(`JavaPluginAction`)이 `Configuration.setVisible`을 써서 deprecation 경고 1건(Gradle 11 제거 예정 — 9.x 영향 없음). 4단계에서 JDK 17·21 모두 `clean test` 통과, 실행 중 Tomcat 10.1.61 확인 → 실측 조건 해소(8.14.6 폴백 불필요).
 - **검증 정책(사용자 결정 2026-10-25)**: 기본 개발·검증은 JDK 17(타깃·명세 최소 버전), 단계 완료와 제출 전에 JDK 21로 한 번 교차 확인한다. 21 확인의 목적은 코드가 아니라 빌드 환경이다 — toolchain이 없으므로 채점자의 JDK에서 Gradle·javac·Lombok 애너테이션 프로세서·테스트 라이브러리가 실행되며, 대상이 17이어도 새 JDK에서 빌드가 깨질 수 있다(예: Lombok 1.18.28 이하는 JDK 21 javac에서 컴파일 실패, Gradle 8.14는 JDK 25에서 실행 불가).
 
 ### D-02 Lombok·springdoc 유지 — 확정
