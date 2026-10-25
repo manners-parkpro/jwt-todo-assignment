@@ -44,4 +44,5 @@ out/
 .DS_Store
 .claude/settings.local.json
 .claude/prompt-history.jsonl
+.claude/instructions-log.jsonl
 docs/assignment-spec.md

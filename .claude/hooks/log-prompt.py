@@ -14,15 +14,20 @@ import sys
 from pathlib import Path
 
 LOG_PATH = Path(__file__).resolve().parent.parent / "prompt-history.jsonl"
+# 백그라운드 작업 완료 알림과 서브에이전트 보고도 이 이벤트로 들어오지만 사용자 프롬프트가 아니므로 기록하지 않는다
+HARNESS_MESSAGE_PREFIXES = ("<task-notification>", "<agent-message")
 
 
 def main() -> None:
     event = json.load(sys.stdin)
+    prompt = event.get("prompt", "")
+    if prompt.startswith(HARNESS_MESSAGE_PREFIXES):
+        return
     record = {
         "timestamp": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "session_id": event.get("session_id"),
         "source": "hook",
-        "prompt": event.get("prompt", ""),
+        "prompt": prompt,
     }
     fd = os.open(LOG_PATH, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
     with os.fdopen(fd, "a", encoding="utf-8") as log:
