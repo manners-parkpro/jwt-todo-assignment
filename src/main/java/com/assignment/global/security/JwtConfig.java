@@ -1,5 +1,6 @@
 package com.assignment.global.security;
 
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
@@ -11,8 +12,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 @Slf4j
 @Configuration
@@ -23,6 +26,11 @@ public class JwtConfig {
 	@Bean
 	SecretKey jwtSigningKey(@Value("${auth.jwt-secret}") String jwtSecret) {
 		return new SecretKeySpec(keyBytes(jwtSecret), "HmacSHA256");
+	}
+
+	@Bean
+	JwtEncoder jwtEncoder(SecretKey jwtSigningKey) {
+		return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSigningKey));
 	}
 
 	@Bean

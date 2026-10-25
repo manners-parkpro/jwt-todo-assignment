@@ -16,3 +16,4 @@ spring:
 auth:
   # JWT 서명 키(Base64, 디코딩 32바이트 이상). 비워 두면 기동할 때 임의 키를 만들며, 재시작하면 기존 액세스 토큰은 무효가 된다
   jwt-secret: ${JWT_SECRET:}
+  access-token-ttl: 1h
