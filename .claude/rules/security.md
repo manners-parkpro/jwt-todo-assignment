@@ -34,8 +34,8 @@ paths:
 - 로그인 실패는 "없는 사용자"와 "비밀번호 불일치"를 구분하지 않고 같은 401·같은 메시지로 응답한다.
 
 ## 소유권
-- TODO 단건 조회·수정·삭제는 `id`와 `ownerId`를 함께 조건으로 조회한다. 미존재와 타인 소유는 똑같이 404로 응답한다(존재 은닉).
-- 목록은 `ownerId` 조건으로만 조회한다.
+- TODO 단건 조회·수정·삭제는 `id`와 `userId`를 함께 조건으로 조회한다. 미존재와 타인 소유는 똑같이 404로 응답한다(존재 은닉).
+- 목록은 `userId` 조건으로만 조회한다.
 
 ## 사용 금지 기능 (Boot 3.5 OSS 종료 후 공개된 CVE의 전제 조건 — D-01)
 - 임베디드 LDAP(`UnboundIdContainer`, `spring.ldap.embedded.*`), `AesBytesEncryptor`, 요청값으로 만든 SpEL 평가, 네이티브 쿼리 + 요청값 `Sort`. (`@AuthenticationPrincipal`의 상수 SpEL은 허용)

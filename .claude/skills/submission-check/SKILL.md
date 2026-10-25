@@ -21,7 +21,7 @@ disable-model-invocation: true
      curl -s -o /dev/null -w '%{http_code}\n' $B/users/me -H "Authorization: Bearer $T"
      curl -s -o /dev/null -w '%{http_code}\n' $B/todos
      ```
-   - `sqlite3 todo.db '.schema'` → `users`(username `unique`), `todos`(`owner_id` 인덱스), `refresh_tokens`(`token_hash` `unique`, `user_id` 인덱스).
+   - `sqlite3 todo.db '.schema'` → `users`(username `unique`), `todos`(`user_id` 인덱스), `refresh_tokens`(`token_hash` `unique`, `user_id` 인덱스).
    - 민감정보(SEC-09): 가입·로그인·`/users/me` 응답 본문에 `password`가 없는지, 실행 로그에 `eyJ`(JWT)·`Bearer `·스모크 비밀번호가 나오지 않는지 `grep`으로 확인한다.
    - 종료 후 남은 프로세스가 없는지 확인한다. 토큰 값은 출력·기록하지 않는다.
 4. **정적 점검**:

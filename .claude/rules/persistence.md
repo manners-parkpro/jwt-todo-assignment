@@ -19,7 +19,7 @@ paths:
 - 의존성과 버전은 `build.md`를 따른다.
 
 ## SQLite DDL 함정 (Hibernate 6.6.53 소스로 확인)
-- **FK 제약은 생성되지 않는다**(`hasAlterTable()=false`라 FK DDL을 생략). `@ManyToOne`으로 무결성을 기대하지 말고 사용자 ID 컬럼(`owner_id`·`user_id`, Long) + `@Index`로 두며, 무결성은 애플리케이션에서 보장한다.
+- **FK 제약은 생성되지 않는다**(`hasAlterTable()=false`라 FK DDL을 생략). `@ManyToOne`으로 무결성을 기대하지 말고 사용자 ID 컬럼(`user_id`, Long) + `@Index`로 두며, 무결성은 애플리케이션에서 보장한다.
 - **유니크는 `@Column(unique = true)`로만 건다** — CREATE TABLE에 인라인으로 들어간다. `@Table(uniqueConstraints = ...)`는 ALTER가 필요해 SQLite에서 생략된다.
 - PK: `@GeneratedValue(strategy = GenerationType.IDENTITY)`.
 - 컬럼 타입은 Long·String·boolean만 쓴다. 시각은 epoch 밀리초 Long으로 저장한다(SQLite 날짜 타입 회피). Enum이 필요해지면 저장→조회 왕복 테스트로 먼저 확인한다.
@@ -28,12 +28,12 @@ paths:
 | 테이블 | 컬럼 | 제약·인덱스 |
 |---|---|---|
 | `users` | `id`, `username`, `password` | `username` 유니크 |
-| `todos` | `id`, `owner_id`, `title`, `description`, `completed` | `owner_id` 인덱스 |
+| `todos` | `id`, `user_id`, `title`, `description`, `completed` | `user_id` 인덱스 |
 | `refresh_tokens` | `id`, `user_id`, `token_hash`, `expires_at`(epoch ms), `used` | `token_hash` 유니크, `user_id` 인덱스 |
 
 ## JPA 엔티티·리포지토리
 - `adapter.out.persistence` 안에만 둔다. `protected` 기본 생성자, setter 없음, `from(domain)`/`toDomain()` 변환 메서드.
-- 조회 메서드에는 소유자 조건을 넣는다: `findByIdAndOwnerId`, `findAllByOwnerIdOrderByIdAsc`. 사용자는 `findByUsername`, `existsByUsername`. 리프레시 토큰은 `findByTokenHash`, `deleteAllByUserId`, `deleteAllByUserIdAndExpiresAtLessThan`.
+- 조회 메서드에는 소유자 조건을 넣는다: `findByIdAndUserId`, `findAllByUserIdOrderByIdAsc`. 사용자 ID 필드는 두 테이블 모두 `userId`(컬럼 `user_id`)로 쓰며, Boot 기본 명명 전략이 바꿔 주므로 `@Column(name)`을 붙이지 않는다. 사용자는 `findByUsername`, `existsByUsername`. 리프레시 토큰은 `findByTokenHash`, `deleteAllByUserId`, `deleteAllByUserIdAndExpiresAtLessThan`.
 - 네이티브 쿼리(`@NativeQuery`, `nativeQuery = true`)와 요청값으로 만든 `Sort`·`Pageable`은 쓰지 않는다. 정렬은 메서드 이름에 고정한다(CVE-2026-47834 전제 회피).
 
 ## 검증

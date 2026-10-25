@@ -28,7 +28,7 @@ com.assignment
 - `application`: `domain`만 의존한다. 프레임워크는 `@Service`, `@Transactional`과 설정값을 받는 생성자 파라미터의 `@Value`(예: 리프레시 토큰 수명)만 허용하고 웹·JPA·Spring Data·Spring Security 타입은 쓰지 않는다.
 - `adapter.in.web`: `application.port.in`만 호출한다(응답 변환을 위해 `domain` 읽기는 가능). 서비스 구현체·리포지토리를 직접 호출하지 않는다.
 - `adapter.out.*`: `application.port.out`을 구현하고 `domain`을 사용한다. `global`은 공통 설정만 담고 기능 로직을 두지 않는다.
-- 기능 간(`user` ↔ `todo`) 직접 참조 금지. TODO는 소유자를 `ownerId`(Long)로만 참조한다(집합체 간 ID 참조).
+- 기능 간(`user` ↔ `todo`) 직접 참조 금지. TODO는 소유자를 `userId`(Long)로만 참조한다(집합체 간 ID 참조).
 
 ## 포트 정책
 - In Port: 책임별 인터페이스 — `UserUseCase`(가입·내 정보), `AuthUseCase`(로그인·토큰 재발급), `TodoUseCase`(생성·목록·단건·수정·삭제). 호출자가 컨트롤러 하나뿐이라 유스케이스마다 쪼개지 않는다.

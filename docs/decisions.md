@@ -73,7 +73,7 @@
 - **대안**: 전역 SNAKE_CASE + springdoc용 `ModelResolver` 빈 — 설정이 두 곳으로 나뉜다. 리프레시 토큰을 HttpOnly 쿠키로 전달 — D-15 대안 참조.
 
 ### D-08 소유권 검사와 존재 은닉 — 확정
-- **결정**: 단건 조회·수정·삭제는 `id + ownerId` 조건으로 조회하고, 미존재·타인 소유 모두 404로 응답한다.
+- **결정**: 단건 조회·수정·삭제는 `id + userId` 조건으로 조회하고, 미존재·타인 소유 모두 404로 응답한다.
 - **근거**: 명세 "로그인한 사용자 본인의 TODO만 다룹니다". RFC 9110 §15.5.4: 대상의 존재를 숨기려는 서버는 403 대신 404로 응답할 수 있다. IDOR 방지.
 - **대안**: 403 — 다른 사용자의 리소스가 존재한다는 사실이 드러난다.
 
@@ -82,7 +82,7 @@
 - **근거**: Spring Security 6.5.11 `BCrypt.java:615-616`이 72바이트 초과 시 `IllegalArgumentException("password cannot be more than 72 bytes")`을 던진다 → 검증하지 않으면 500(CVE-2025-22228 대응 이후 동작). 회원가입 409가 이미 계정 존재를 드러내므로 로그인 응답 시간 균등화(더미 해시 비교)는 하지 않는다(YAGNI). 메시지 통일은 비용이 없어 유지한다.
 
 ### D-10 SQLite 영속성 — 확정(실측 조건)
-- **결정**: 테이블 생성 경로는 README 명령(`./gradlew bootRun`, `./gradlew test`)이 일으키는 Hibernate `ddl-auto` 하나다(앱 `update`, 테스트 `create-drop`). 수동 SQL·`schema.sql`·`data.sql`·마이그레이션 명령·미리 만든 DB 파일과 README의 SQL 명령을 금지한다(사용자 요청 2026-10-25). dialect 명시, `open-in-view: false`, Hikari `maximum-pool-size: 1`, DB 파일은 앱 `./todo.db`·테스트 `build/todo-test.db`. FK 대신 사용자 ID 컬럼(`todos.owner_id`, `refresh_tokens.user_id`) 인덱스 + 애플리케이션 무결성, 유니크는 `@Column(unique = true)`(S7: TODO 컬럼을 필드명 `ownerId`와 같은 `owner_id`로 정해 컬럼명 매핑을 없앴다). 컬럼 타입은 Long·String·boolean이고 시각은 epoch 밀리초 Long. 네이티브 쿼리·요청 Sort는 쓰지 않는다.
+- **결정**: 테이블 생성 경로는 README 명령(`./gradlew bootRun`, `./gradlew test`)이 일으키는 Hibernate `ddl-auto` 하나다(앱 `update`, 테스트 `create-drop`). 수동 SQL·`schema.sql`·`data.sql`·마이그레이션 명령·미리 만든 DB 파일과 README의 SQL 명령을 금지한다(사용자 요청 2026-10-25). dialect 명시, `open-in-view: false`, Hikari `maximum-pool-size: 1`, DB 파일은 앱 `./todo.db`·테스트 `build/todo-test.db`. FK 대신 사용자 ID 컬럼(`todos.user_id`, `refresh_tokens.user_id`) 인덱스 + 애플리케이션 무결성, 유니크는 `@Column(unique = true)`. 사용자 ID 필드는 두 테이블 모두 `userId`다(S8 사용자 검토 — S7에 컬럼을 `owner_id`로 바꿨던 것을 되돌림: Boot 기본 명명 전략(`CamelCaseToUnderscoresNamingStrategy`, 3.5.16 jar 확인)이 두 이름 모두 어노테이션 없이 바꿔 주므로 매핑 이점은 같고, 관례·명세 용어("사용자 본인의 TODO")·JWT `sub`부터 저장소까지 같은 이름·`refresh_tokens`와의 일관성에서 `userId`가 낫다. `ownerId`의 이점은 사용자 관계가 여럿일 때의 구분인데 범위 밖이다). 컬럼 타입은 Long·String·boolean이고 시각은 epoch 밀리초 Long. 네이티브 쿼리·요청 Sort는 쓰지 않는다.
 - **근거**: 명세 "README에 적힌 명령어만으로 테이블이 생성되어야 합니다. (지원자가 SQL을 직접 실행해야 하는 방식은 안 됩니다)". 생성 경로를 하나로 두면 채점 환경에서 결과가 결정적이다. Boot 3.5.16 BOM — sqlite-jdbc 3.49.1.0, hibernate-community-dialects = Hibernate 6.6.53.Final. 소스로 확인 — SQLiteDialect `hasAlterTable()=false` → `StandardForeignKeyExporter`가 FK DDL을 만들지 않는다. SQLite용 유니크 처리는 컬럼 정의에 `unique`를 인라인으로 붙이고, ALTER가 필요한 테이블 단위 유니크 제약은 생략한다. `busy_timeout` 기본 3000ms, SQLite는 동시 writer 1개.
 - **위험**: 풀 1개에서 연결 대기 타임아웃이 생기면 기본 풀 + busy_timeout 방식으로 재검토한다.
 
