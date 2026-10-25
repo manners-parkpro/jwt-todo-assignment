@@ -1,3 +1,14 @@
 spring:
   application:
     name: assignment
+  datasource:
+    url: jdbc:sqlite:todo.db
+    hikari:
+      # SQLite는 동시에 하나의 연결만 쓸 수 있어 SQLITE_BUSY를 막기 위해 연결을 하나로 제한한다
+      maximum-pool-size: 1
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      # README의 실행 명령만으로 테이블이 생성된다(수동 SQL 불필요)
+      ddl-auto: update
+    open-in-view: false

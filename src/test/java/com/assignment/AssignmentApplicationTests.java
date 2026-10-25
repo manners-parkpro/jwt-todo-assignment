@@ -1,10 +1,9 @@
 package com.assignment;
 
+import com.assignment.support.IntegrationTestSupport;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class AssignmentApplicationTests {
+class AssignmentApplicationTests extends IntegrationTestSupport {
 
 	@Test
 	void contextLoads() {
