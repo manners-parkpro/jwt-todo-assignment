@@ -10,6 +10,10 @@ paths:
 2. 사용자 요청 확장(재발급) 테스트 TEST-07·08은 재발급 기능 구현 단계에서 함께 작성한다.
 3. 그다음 선택 테스트 TEST-X1~X4(위조·만료 토큰 401, 타인 TODO 404, 중복 가입 409, 입력 검증 400). 커버리지만을 위한 테스트는 만들지 않는다.
 
+## 필수 테스트 보호 (D-15)
+- TEST-01~04는 확장 기능(Refresh Token, 선택 사항)과 독립적으로 작성한다. TEST-01은 로그인 응답에서 `access_token`만 읽고 `refresh_token`이 있다고 가정하지 않는다.
+- 확장 기능을 구현한 뒤에는 TEST-01~04를 다시 실행해 회귀가 없는지 확인한다. 확장 때문에 필수 테스트를 수정·약화·생략하지 않는다.
+
 ## 구성
 - 통합 테스트: `@SpringBootTest` + `@AutoConfigureMockMvc` + `@ActiveProfiles("test")`를 공통 베이스 `IntegrationTestSupport`에 둔다.
 - 보안 필터를 포함한 실제 흐름으로 검증한다. 토큰은 `/users/login` 응답에서 추출한다(`@WithMockUser`·목 인증 미사용).

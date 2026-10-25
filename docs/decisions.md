@@ -20,7 +20,8 @@
 | D-12 | 요청·응답 필드 | 확정 |
 | D-13 | 작업 관리 체계, 단계 게이트, 공개 저장소 운영 | 확정 |
 | D-14 | 선택 사항(가산점) 처리 정책 | 확정 |
-| D-15 | 토큰 재발급(Refresh Token) 확장 | 확정 |
+| D-15 | 토큰 재발급(Refresh Token) 확장과 필수 테스트 보호 | 확정 |
+| D-16 | 프롬프트 기록 보존(같은 턴 기록·훅 자동 백업·백필) | 확정 |
 
 ---
 
@@ -33,6 +34,7 @@
   - 보안: 3.5 계열 OSS 지원은 2026-06-30 종료. 이후 공개된 CVE-2026-59270(임베디드 UnboundID LDAP)·CVE-2026-47842(`AesBytesEncryptor`)·CVE-2026-47886(신뢰할 수 없는 SpEL 평가)·CVE-2026-47834(Spring Data JPA 3.5.13, 네이티브 쿼리+요청 Sort)은 3.x/6.x 계열 수정이 엔터프라이즈 전용이지만, 전제 기능을 쓰지 않는다(spring.io 권고의 조건 확인) → `security.md` 사용 금지 기능으로 고정. Tomcat 10.1.56~10.1.61에는 Apache의 OSS 보안 수정이 있으므로 버전만 올린다.
 - **대안**: Boot 3.5.16 + Gradle 8.14.6(공식 조합, JDK 25 이상에서 실행 불가) · Boot 4.1.2(지속 패치, JUnit 6이라 명세와 불일치) · Java 21 toolchain(채점 환경에 JDK 21 필요).
 - **실측 계획**: JDK 17·21로 `./gradlew clean test/build --warning-mode all`, class major 61, `dependencyInsight tomcat-embed-core`. 실패하면 8.14.6으로 폴백하고 README에 "JDK 17~24"를 명시한다.
+- **실측 결과(3단계, 2026-10-25)**: Gradle 9.8.2 + Boot 3.5.16으로 JDK 21·17 모두 `clean compileJava compileTestJava assemble`(bootJar 포함) 성공, class major 61. 해석된 버전 — spring-boot 3.5.16, spring-core 6.2.19, spring-security-oauth2-jose 6.5.11, hibernate-core·community-dialects 6.6.53.Final, sqlite-jdbc 3.49.1.0, tomcat-embed-core 10.1.61(rule로 선택), springdoc 2.8.17, junit-jupiter 5.12.2. Boot 플러그인(`JavaPluginAction`)이 `Configuration.setVisible`을 써서 deprecation 경고 1건(Gradle 11 제거 예정 — 9.x 영향 없음). 테스트 실행 검증은 4단계에서 한다.
 
 ### D-02 Lombok·springdoc 유지 — 확정
 - **결정**: 둘 다 유지(사용자 결정). Lombok은 main 코드에만 쓰고 사용 범위를 제한한다(architecture.md). springdoc은 Boot 3.5용 2.8.17. Swagger 경로는 `permitAll`, `@SecurityRequirement`는 보호 API에만 붙인다.
@@ -87,7 +89,7 @@
 - **근거**: 명세 원문(2026-10-25 확인)에 필드 정의가 없어 최소 필드로 정했다. 명세 선택 기능의 "제목으로 검색"과 `title`이 맞는다.
 
 ### D-13 작업 관리 체계, 단계 게이트, 공개 저장소 운영 — 확정
-- **결정**: `CLAUDE.md`(상시 로드) + `.claude/rules/` 7개(경로 한정 자동 로드) + `.claude/skills/submission-check`(수동 실행 절차) + `docs/`(체크리스트·결정·진행, 명세 사본) + `prompts/used_prompts.md`(명세대로 "간단히"). 진행은 설계 승인 → 구현 단계별 계획·구현·검증·보고 → 사용자 확인 후 다음 단계. 원격 저장소는 `https://github.com/manners-parkpro/jwt-todo-assignment.git`(공개, `main`)이며, 명세 사본 `docs/assignment-spec.md`는 `.gitignore`로 공개 저장소에서 제외하고 로컬·제출 ZIP에만 둔다(사용자 결정). 커밋·푸시는 사용자 요청 시에만 한다.
+- **결정**: `CLAUDE.md`(상시 로드) + `.claude/rules/` 7개(경로 한정 자동 로드) + `.claude/skills/submission-check`(수동 실행 절차) + `docs/`(체크리스트·결정·진행, 명세 사본) + `prompts/used_prompts.md`(명세대로 "간단히"). 진행은 설계 승인 → 구현 단계별 계획·구현·검증·보고 → 사용자 확인 후 다음 단계. 원격 저장소는 `https://github.com/manners-parkpro/jwt-todo-assignment.git`(공개, `main`)이며, 명세 사본 `docs/assignment-spec.md`는 `.gitignore`로 공개 저장소에서 제외하고 로컬·제출 ZIP에만 둔다(사용자 결정). 커밋·푸시는 사용자 요청 시에만 한다. 커밋 작성자는 저장소 로컬 git 설정으로 닉네임 `Colin`과 GitHub noreply 주소(`43167000+manners-parkpro@users.noreply.github.com`)를 쓴다 — 회사 도메인 제외(사용자 요청 2026-10-25). 이미 올린 초기 커밋은 작성자 정보만 바꿔 다시 만들었고(트리 동일), 원격 반영에는 force push가 필요하다.
 - **근거**: Claude Code 공식 문서(memory·best-practices·skills) — CLAUDE.md는 200줄 미만 권장, 일부 영역 규칙은 path-scoped rule(Read/Write/Edit 시 로드), 다단계 절차는 skill, `@import`는 컨텍스트를 줄이지 못함, 자명한 지침은 제외. Anthropic "Effective harnesses for long-running agents" — 진행 로그·기능 목록·git, 세션 시작 시 기준선 확인, 한 번에 한 기능. 회사 과제 명세의 공개 재배포는 피한다.
 - **대안**: 단일 CLAUDE.md(초안 458줄) — 권장 크기를 넘어 지침 준수율이 떨어진다.
 
@@ -95,13 +97,27 @@
 - **결정**: OPT-01~03(검색, 회원 수정·탈퇴)은 필수 항목(TEST-01~08 통과, README 실검증)을 마친 뒤 범위와 위험을 다시 판단해 결정한다. 추가 테스트(TEST-X)는 필수 4종 완료 후 작성한다.
 - **근거**: 명세 "안 해도 감점 없음", 평가 1순위는 요구사항대로 동작하는가, YAGNI. 회원 수정(비밀번호 변경)과 탈퇴는 리프레시 토큰 폐기와 TODO 정리(FK 없음) 같은 추가 결정이 필요하다.
 
-### D-15 토큰 재발급(Refresh Token) 확장 — 확정
+### D-15 토큰 재발급(Refresh Token) 확장과 필수 테스트 보호 — 확정
 - **결정**:
   - 로그인 때 액세스 토큰(JWT, 1시간)과 리프레시 토큰을 함께 발급하고 응답 본문 `{access_token, refresh_token}`으로 전달한다(사용자 결정 2026-10-25).
   - 리프레시 토큰은 `SecureRandom` 32바이트 Base64URL 불투명 토큰이다. SHA-256 해시만 `refresh_tokens`에 저장하고, 만료는 `auth.refresh-token-ttl: 7d`다.
   - `POST /users/refresh`가 유효한 리프레시 토큰을 새 토큰 쌍으로 교환한다(회전 — 사용한 토큰은 `used` 표시).
   - 이미 사용한 토큰이 다시 오면 그 사용자의 리프레시 토큰을 모두 폐기한다(재사용 탐지). 없는 토큰·만료·재사용은 같은 401로 응답한다.
   - 공개 인증 엔드포인트(가입·로그인·재발급)는 `Authorization` 헤더를 무시하는 `BearerTokenResolver`를 쓴다.
+  - **필수 테스트 보호**(사용자 지시 2026-10-25 "필수 테스트 사항에 대한 제약이나 누락이 되어서는 결코 안 된다"): TEST-01~04는 리프레시 토큰과 독립이다(TEST-01은 `access_token`만 사용). 6단계에서 로그인을 `access_token`만 발급하도록 완성해 필수 흐름을 먼저 통과시키고, 8단계에서 `refresh_token` 발급과 재발급 API를 추가한 뒤 TEST-01~04 회귀를 확인한다.
 - **근거**: 사용자 요청 "토큰이 만료되었을 때 재요청 시 다시 발급하여 API 호출이 가능하도록". 리프레시 토큰을 JWT가 아닌 DB 저장 불투명 토큰으로 두면 서명 키와 무관해서, 임의 키 대체(D-06)로 재시작한 뒤에도 재발급된다. RFC 9700 §2.2.2: 공개 클라이언트의 리프레시 토큰은 sender-constrained이거나 회전을 써야 한다(MUST). §4.14.2: 회전 시 이전 토큰은 무효화하되 관계를 보관하고, 무효화된 토큰이 제출되면 침해로 보고 활성 토큰을 폐기한다. 해시만 저장하면 DB가 유출돼도 토큰을 쓸 수 없다. 리소스 서버는 permitAll 경로에서도 Bearer 헤더를 검증하므로, 공개 인증 경로에서 헤더를 무시해야 만료 토큰을 단 클라이언트가 재발급을 받을 수 있다. 명세는 Refresh Token을 "구현하지 않아도 된다"고만 하므로 구현해도 충돌하지 않고, `access_token` 필드는 그대로다.
 - **대안**: HttpOnly 쿠키 전달(명세 응답과 정확히 일치하지만 curl·테스트에 쿠키 처리 필요) · JWT 리프레시 토큰(서명 키에 묶여 재시작 시 무효, 폐기 불가) · 재로그인만 허용(확장 요구 미충족) · 토큰 계열(family) 단위 폐기(더 정밀하지만 컬럼·로직 추가 — 사용자 단위 폐기로 단순화, 대신 재사용 탐지 시 그 사용자의 다른 기기도 다시 로그인해야 함).
 - **범위 밖(YAGNI)**: 로그아웃 엔드포인트, 리프레시 토큰 sender-constraint(DPoP·mTLS), 재발급 요청 속도 제한.
+
+### D-16 프롬프트 기록 보존 — 확정
+- **결정**:
+  - `prompts/used_prompts.md`(제출용 요약 기록)는 프롬프트를 받은 턴 안에 갱신하고 커밋한다.
+  - `UserPromptSubmit` 훅(`.claude/hooks/log-prompt.py`, 설정은 로컬 `.claude/settings.local.json`)이 제출되는 모든 프롬프트 원문을 `.claude/prompt-history.jsonl`(권한 600, 공개 저장소·ZIP 제외)에 자동으로 덧붙인다.
+  - 이번 세션 프롬프트 7건은 `~/.claude/history.jsonl`과 붙여넣기 캐시에서 원문을 복원해 같은 파일에 백필했다.
+  - 새 세션은 시작할 때 백업 파일과 `used_prompts.md`를 대조해 빠진 기록을 먼저 채운다(CLAUDE.md 세션 루틴).
+- **근거(검증)**:
+  - 컨텍스트 초기화·압축은 디스크 파일을 지우지 않지만, 대화 속 원문은 압축 때 요약되고 초기화 후에는 다음 세션의 맥락에 없다(Claude Code 문서 "What survives compaction": 프로젝트 루트 CLAUDE.md는 디스크에서 다시 주입, 대화는 요약).
+  - 트랜스크립트(`~/.claude/projects/…/*.jsonl`)와 `paste-cache/`는 `cleanupPeriodDays`(기본 30일)가 지나면 자동 삭제된다. `history.jsonl`은 남지만 큰 붙여넣기는 해시 참조만 저장한다 — 실측 결과 첫 프롬프트의 초안 원문(18.7KB)은 `paste-cache`에만 있었다.
+  - 훅은 프롬프트 제출마다 실행되며 입력의 `prompt` 필드로 원문을 받는다. stdout은 컨텍스트에 추가되고 종료 코드 2는 프롬프트를 막으므로, 출력 없이 기록하고 실패하면 1로 끝낸다(경고만 표시). 설정 파일 변경은 파일 감시자가 자동으로 반영한다.
+- **검증**: 파이프 테스트(정상: 종료 0·stdout 없음·권한 600·원문 일치·덧붙이기 / 실패: 종료 1), jq 스키마 검증, 셸 형식 명령 실행, 백필 7건 중 복원 실패 0건. 실제 훅 실행은 다음 프롬프트에서 확인한다.
+- **대안**: `cleanupPeriodDays` 상향(전역 설정이라 모든 프로젝트에 영향, 붙여넣기 캐시만으로 남는 문제는 그대로) · 원문 로그를 공개 저장소에 커밋(프롬프트 원문 전체 공개).

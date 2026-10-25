@@ -28,6 +28,7 @@ disable-model-invocation: true
    - 고정 키: `grep -rniE 'secret' src/main/resources src/test/resources` → `${JWT_SECRET:}` 참조 외 없음
    - 사용 금지 기능: `grep -rnE 'UnboundIdContainer|AesBytesEncryptor|SpelExpressionParser|nativeQuery|@NativeQuery' src/main` → 출력 없음
    - 테이블 생성 경로 단일화: `ls src/main/resources` → `schema.sql`·`data.sql` 없음, `grep -niE 'sqlite3|create table|insert into' README.md` → 출력 없음
+   - 커밋 작성자: `git log --format='%ae%n%ce' | sort -u` → GitHub noreply 주소만(회사 도메인 없음)
    - 버전: `build.gradle`의 Boot 3.5.x·`options.release = 17`·`tomcat.version`, `gradle-wrapper.properties`의 9.8.2(폴백했다면 8.14.6과 README 안내)
 5. **문서**: README 필수 섹션(`.claude/rules/docs.md`)이 있고 명령이 실측과 일치하는지, `prompts/used_prompts.md`가 최신 작업까지 기록됐는지 확인한다.
 6. **ZIP** — `.git/` 포함 여부를 먼저 사용자에게 확인한다(아래 명령은 제외가 기본). 프로젝트 상위 폴더에 최상위 폴더째 압축한다.
@@ -35,7 +36,7 @@ disable-model-invocation: true
    P="$(basename "$PWD")"; N="$ARGUMENTS"
    cd .. && zip -rq "${N}_springboot.zip" "$P" \
      -x "$P/build/*" "$P/target/*" "$P/.gradle/*" "$P/out/*" "$P/bin/*" "$P/.idea/*" "$P/.vscode/*" "$P/.git/*" \
-        "*.db" "*.db-*" "*.iml" "*.DS_Store" "$P/.env*" "$P/.claude/settings.local.json" "$P/HELP.md"
+        "*.db" "*.db-*" "*.iml" "*.DS_Store" "$P/.env*" "$P/.claude/settings.local.json" "$P/.claude/prompt-history.jsonl" "$P/HELP.md"
    unzip -l "${N}_springboot.zip" | grep -E '/(build|target|\.gradle)/|\.db' && echo '!! 제외 실패'
    unzip -l "${N}_springboot.zip" | grep -E 'gradlew$|gradle-wrapper\.jar|README\.md|prompts/used_prompts\.md|docs/assignment-spec\.md|src/(main|test)/' | head
    ```

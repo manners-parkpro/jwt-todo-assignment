@@ -9,14 +9,14 @@
 ## 1. 기술·실행 (TECH)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ⬜ |
-| TECH-02 | Spring Boot 3.5.16 | 초안·D-01 | `build.gradle` | `./gradlew dependencies` | ❌ 현재 4.1.2 |
-| TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | 🟨 Wrapper 있음, 조합 미검증 |
+| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | 🟨 JDK 17·21 컴파일·assemble 성공, class 61(S4) — test는 4단계 |
+| TECH-02 | Spring Boot 3.5.16 | 초안·D-01 | `build.gradle` | `./gradlew dependencies` | ✅ spring-boot 3.5.16 해석 확인(S4) |
+| TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | 🟨 JDK 17·21에서 빌드 성공, deprecation 경고 1건(Gradle 11 제거 예정)(S4) — test는 4단계 |
 | TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | ⬜ |
-| TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | ⬜ |
+| TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | 🟨 junit-jupiter 5.12.2 해석 확인(S4) — 실행은 4단계 |
 | TECH-06 | 테이블은 README 명령만으로 생성 — 생성 경로는 `ddl-auto` 하나(수동 SQL·`schema.sql`·DB 파일 제공 금지), README에 SQL 명령 없음 | 명세 기술 조건·요청·D-10 | `application.yaml` | `todo.db`를 지운 클린 상태에서 README 명령만 실행 후 `.schema` | ⬜ |
 | TECH-07 | **⚠ 실격** README에 적힌 명령어로 실행·테스트 가능 | 명세 실격 조건 | `README.md` | README 순서대로 클린 실행 | ⬜ |
-| TECH-08 | 내장 Tomcat 보안 패치 버전(10.1.61) 오버라이드 | 설계·D-01 | `build.gradle` | `dependencyInsight` | ⬜ |
+| TECH-08 | 내장 Tomcat 보안 패치 버전(10.1.61) 오버라이드 | 설계·D-01 | `build.gradle` | `dependencyInsight` | ✅ 10.1.55 → 10.1.61 selected by rule(S4) |
 
 ## 2. API (API) — 계약 상세: `.claude/rules/api.md`
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -60,7 +60,7 @@
 ## 5. DB (DB)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| DB-01 | `sqlite-jdbc`·`hibernate-community-dialects` 의존성, dialect `SQLiteDialect`, `ddl-auto: update` | 명세 SQLite 설정 참고 | `build.gradle`, `application.yaml` | 기동 로그, `./gradlew dependencies` | ⬜ |
+| DB-01 | `sqlite-jdbc`·`hibernate-community-dialects` 의존성, dialect `SQLiteDialect`, `ddl-auto: update` | 명세 SQLite 설정 참고 | `build.gradle`, `application.yaml` | 기동 로그, `./gradlew dependencies` | 🟨 의존성 3.49.1.0·6.6.53.Final 확인(S4) — dialect·ddl-auto 설정은 4단계 |
 | DB-02 | SQLite에서 생성·조회·수정·삭제 실제 동작 | 초안 | persistence 어댑터 | TEST-02 | ⬜ |
 | DB-03 | 테이블·관계(FK 미생성 대응): `users`(username `unique`), `todos`(`user_id` 인덱스), `refresh_tokens`(`token_hash` `unique`) | 초안·요청·D-04·D-10 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ⬜ |
 | DB-04 | 개발 DB와 테스트 DB 분리 | 초안·D-10 | `todo.db` / `build/todo-test.db` | 테스트 후 `todo.db` 미변경 | ⬜ |
@@ -82,7 +82,7 @@
 | TEST-X3 | (선택) username 중복 가입 → 409 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-X4 | (선택) 입력 검증 실패 → 400 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
 
-필수 시나리오 단계 — 4종을 먼저 완성한 뒤 TEST-07·08, TEST-X를 작성한다.
+필수 시나리오 단계 — 4종을 먼저 완성한 뒤 TEST-07·08, TEST-X를 작성한다. 필수 4종은 확장 기능(Refresh Token)과 독립이며, 확장 구현 후 회귀를 확인한다(D-15).
 - **TEST-01**: 가입 → 로그인 → 응답의 `access_token` 추출 → `Authorization: Bearer <token>`으로 `GET /users/me` → 성공 상태와 사용자 정보 검증
 - **TEST-02**: 사용자 준비·로그인 → TODO 생성 → 목록에 포함 확인 → 수정 → 수정값 반영 확인 → 삭제 → 삭제 결과 확인(단건 404·목록 미포함)
 - **TEST-03**: 보호 API를 Authorization 헤더 없이 호출 → 401
@@ -96,12 +96,14 @@
 | DOC-03 | README: 테스트 실행 방법 `./gradlew test` | 명세 제출물 | `README.md` | 실행 확인 | ⬜ |
 | DOC-04 | README: API 목록 요약(+ Swagger UI 주소) | 명세 제출물·D-02 | `README.md` | `api.md`와 대조 | ⬜ |
 | DOC-05 | README: 인증 방법(로그인 → Bearer, 만료 1시간, `/users/refresh` 재발급) | 초안·요청 | `README.md` | 검토 | ⬜ |
-| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#3 기록 |
+| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#4 기록 |
+| DOC-07 | 프롬프트 원문 보존 — 받은 턴 안에 기록, 훅 자동 백업(로컬), 이전 프롬프트 백필 | 요청·D-16 | `.claude/hooks/log-prompt.py`, `.claude/prompt-history.jsonl` | 파이프 테스트, 다음 프롬프트 기록 확인 | 🟨 파이프 테스트·백필 7건 완료(S4), 실제 훅 실행 확인 대기 |
 | SUB-01 | 파일명 `이름_springboot.zip`, 제출처 채용 사이트(사람인/잡코리아) | 명세 제출물 | — | 파일명 확인 | ⬜ |
 | SUB-02 | 제외: `build/`, `target/`, `.gradle/`, `*.db` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
 | SUB-03 | 포함: 소스 전체 — `src/`, `build.gradle`, `README.md`, `prompts/used_prompts.md` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
 | SUB-04 | Wrapper(`gradlew`, `gradle/wrapper/*`) 포함, `.claude/settings.local.json`·`HELP.md` 제외 | 설계·D-13 | ZIP | `unzip -l` | 🟨 `HELP.md` 삭제 완료, ZIP 미검증 |
-| SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `unzip -l` | 🟨 `.gitignore` 검증 완료, ZIP 미검증 |
+| SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `git ls-tree`, `unzip -l` | 🟨 원격 트리 제외 확인(`52809a9`), ZIP 미검증 |
+| SUB-06 | 커밋 작성자 정보에 회사 도메인 없음(닉네임 + GitHub noreply) | 요청·D-13 | 저장소 로컬 git 설정 | `git log --format='%ae %ce'` | 🟨 로컬 커밋 정정 완료(`44dd876`), 원격 반영 대기 |
 
 ## 8. 선택 사항 — 가산점 (OPT, 필수 완료 후 결정 — D-14)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -118,5 +120,6 @@
 | R-3 | Hikari 풀 1개 설정의 실제 동작 미검증 | 기동·테스트로 확인 |
 | R-4 | springdoc 스키마와 실제 응답 표기 일치 여부 | `/v3/api-docs`에서 `access_token`·`refresh_token` 확인 |
 | R-5 | 원격 저장소가 공개 — 비밀·명세 사본이 올라가면 안 됨 | 커밋 전 `git status`·`check-ignore` 확인, 비밀은 저장소에 두지 않음(SEC-07) |
+| R-6 | 원격에 회사 도메인 이메일이 담긴 커밋 `52809a9`가 남아 있음. force push 뒤에도 GitHub는 SHA로 접근 가능한 캐시를 남길 수 있음(GitHub 문서) | 사용자가 force push 실행, 완전 제거가 필요하면 저장소 삭제 후 재생성 |
 
 해결됨(2026-10-25): 원문 명세 확보·대조, Lombok·springdoc 유지 결정, `memory-bank/` 삭제, Git 저장소 초기화와 원격 연결.

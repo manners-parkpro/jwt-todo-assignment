@@ -36,13 +36,14 @@ sqlite3 todo.db '.tables'                                   # 테이블 생성 �
 8. 새 영역에 파일을 만들기 전에 해당 `.claude/rules/` 파일을 먼저 읽는다 (경로 규칙은 파일에 접근할 때 로드된다).
 9. 보안 문제, YAGNI, 더 나은 설계안을 발견하면 즉시 보고한다.
 
-**IMPORTANT: `prompts/used_prompts.md`가 없거나 비어 있으면 실격이다.** 주요 AI 작업(설계, 기능 단위 구현, 디버깅, 문서화)을 마칠 때마다 실제 프롬프트와 결과를 어떻게 확인·수정했는지 간단히 추가한다. 하지 않은 일은 쓰지 않는다.
+**IMPORTANT: `prompts/used_prompts.md`가 없거나 비어 있으면 실격이다.** 주요 AI 작업(설계, 기능 단위 구현, 디버깅, 문서화)을 마칠 때마다 실제 프롬프트와 결과를 어떻게 확인·수정했는지 간단히 추가한다. 사용자 프롬프트 원문은 받은 턴 안에 기록한다 — 컨텍스트가 초기화·압축되면 대화 속 원문은 사라진다(원문 백업은 훅이 `.claude/prompt-history.jsonl`에 자동으로 남긴다). 하지 않은 일은 쓰지 않는다.
 
 ## 세션 루틴
 **시작** — 기록과 실제 코드 상태를 대조한 뒤 작업한다. 기록만 믿고 구현됐다고 가정하지 않는다.
 1. `docs/progress.md`(현재 상태·다음 작업)와 `docs/requirements-checklist.md`를 읽는다. `docs/decisions.md`는 필요한 결정만 찾아본다.
 2. `git status`와 `git log --oneline -10`으로 변경 사항을 확인한다.
-3. 구현을 재개하기 전에 `./gradlew test`로 기준선을 확인한다. 실패하면 그 원인부터 해결한다.
+3. `.claude/prompt-history.jsonl` 끝부분과 `prompts/used_prompts.md`를 대조해, 기록이 빠진 프롬프트가 있으면 먼저 기록한다.
+4. 구현을 재개하기 전에 `./gradlew test`로 기준선을 확인한다. 실패하면 그 원인부터 해결한다.
 
 **종료** — 주요 작업마다 아래를 갱신한다.
 - `docs/progress.md`: 맨 위에 세션 로그(완료 작업·수정 파일·실행 명령·실제 결과·실패 원인·다음 작업), "현재 상태/다음 작업" 최신화
@@ -52,6 +53,7 @@ sqlite3 todo.db '.tables'                                   # 테이블 생성 �
 
 ## 완료 기준
 필수 API 8개 동작 · 필수 테스트 4종 통과 · README 명령만으로 실행/테스트 재현 · `prompts/used_prompts.md` 작성.
+**확장 기능(Refresh Token·선택 사항) 때문에 필수 API와 필수 테스트 4종이 제약·변경·누락되면 안 된다** — 필수 테스트는 확장 기능 없이도 통과해야 한다.
 코드를 작성했다는 이유만으로 완료 처리하지 않는다. 최종 점검과 제출 ZIP 생성은 `/submission-check <이름>`으로 한다.
 
 ## 문서 지도
@@ -66,9 +68,11 @@ sqlite3 todo.db '.tables'                                   # 테이블 생성 �
 | `.claude/rules/testing.md` | 테스트 구성·격리·검증 원칙 | `src/test/**` 접근 시 |
 | `.claude/rules/docs.md` | README·프롬프트 기록·진행 문서 작성 규칙 | `README.md`·`docs/**`·`prompts/**` 접근 시 |
 | `.claude/skills/submission-check/` | 최종 검증·제출 ZIP 절차 | `/submission-check` 실행 시 |
+| `.claude/hooks/log-prompt.py` | 프롬프트 원문 자동 백업 훅(설정은 로컬 `.claude/settings.local.json`) | 프롬프트 제출 시 실행 |
+| `.claude/prompt-history.jsonl` | 프롬프트 원문 백업(로컬 전용 — 공개 저장소·ZIP 제외) | 기록 대조 시 |
 | `docs/requirements-checklist.md` | 요구사항 추적·검증 상태 | 세션 시작 시 |
 | `docs/progress.md` | 현재 상태·다음 작업·세션 로그 | 세션 시작 시 |
 | `docs/decisions.md` | 설계 결정과 검증 근거 | 필요할 때 |
 
 ## 컨텍스트 압축 시 보존할 것
-진행 중인 체크리스트 ID, 수정한 파일 목록, 마지막 테스트 명령과 결과(실패 메시지 포함), 미해결 결정 사항.
+진행 중인 체크리스트 ID, 수정한 파일 목록, 마지막 테스트 명령과 결과(실패 메시지 포함), 미해결 결정 사항, `prompts/used_prompts.md`에 아직 기록하지 않은 사용자 프롬프트 원문.
