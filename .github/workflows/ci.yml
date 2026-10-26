@@ -54,6 +54,12 @@ jobs:
           java .github/ci/ReadmeSmoke.java
           if (-not (Test-Path todo.db)) { throw 'todo.db was not created' }
 
+      # Windows는 실행 중인 서버(Gradle 데몬)가 캐시 잠금 파일을 쥐고 있어 작업 뒤 캐시 저장(tar)이 실패한다 — 실패한 작업도 로그를 보관하기 전에 멈춘다
+      - name: 서버 종료
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: Stop-Process -Name java -Force -ErrorAction SilentlyContinue
+
       - name: 실패 시 로그 보관
         if: failure()
         uses: actions/upload-artifact@v7
