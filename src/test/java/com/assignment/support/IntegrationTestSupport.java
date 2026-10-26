@@ -1,5 +1,6 @@
 package com.assignment.support;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -8,6 +9,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -61,6 +63,13 @@ public abstract class IntegrationTestSupport {
 		return mockMvc.perform(post("/users/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(credentials(username, password)));
+	}
+
+	protected long myId(String accessToken) throws Exception {
+		String me = mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		return ((Number) JsonPath.read(me, "$.id")).longValue();
 	}
 
 	private static String credentials(String username, String password) {

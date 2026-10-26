@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,5 +45,13 @@ class UserController {
 	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 	UserResponse updateMe(@CurrentUserId Long userId, @Valid @RequestBody UpdateUserRequest request) {
 		return UserResponse.from(userUseCase.updateMe(request.toCommand(userId)));
+	}
+
+	@DeleteMapping("/me")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "탈퇴", description = "내 TODO와 refresh_token을 지우고 계정을 탈퇴로 표시한다. 이후 로그인·재발급은 401이고, 같은 username으로 다시 가입할 수 없다")
+	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+	void withdraw(@CurrentUserId Long userId) {
+		userUseCase.withdraw(userId);
 	}
 }

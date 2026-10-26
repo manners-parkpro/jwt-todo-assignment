@@ -63,6 +63,12 @@ public class TodoService implements TodoUseCase {
 		todoCommandPort.delete(findOwnedTodo(userId, todoId));
 	}
 
+	@Override
+	@Transactional
+	public void deleteAll(Long userId) {
+		todoCommandPort.deleteAllByUserId(userId);
+	}
+
 	// 다른 사용자의 TODO도 없는 TODO와 같은 404로 응답해 존재 여부를 드러내지 않는다
 	private Todo findOwnedTodo(Long userId, Long todoId) {
 		return todoQueryPort.findByIdAndUserId(todoId, userId).orElseThrow(TodoNotFoundException::new);

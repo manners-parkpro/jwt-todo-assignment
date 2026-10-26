@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "users")
@@ -26,17 +27,27 @@ class UserJpaEntity {
 	@Column(nullable = false)
 	private String password;
 
-	private UserJpaEntity(Long id, String username, String password) {
+	// 기존 todo.db에 이 컬럼을 더할 때(ddl-auto: update) SQLite는 기본값 없는 NOT NULL 컬럼 추가를 거부한다
+	@ColumnDefault("false")
+	@Column(nullable = false)
+	private boolean withdrawn;
+
+	private UserJpaEntity(Long id, String username, String password, boolean withdrawn) {
 		this.id = id;
 		this.username = username;
 		this.password = password;
+		this.withdrawn = withdrawn;
 	}
 
 	static UserJpaEntity from(User user) {
-		return new UserJpaEntity(user.getId(), user.getUsername(), user.getPassword());
+		return new UserJpaEntity(
+				user.getId(),
+				user.getUsername(),
+				user.getPassword(),
+				user.isWithdrawn());
 	}
 
 	User toDomain() {
-		return User.of(id, username, password);
+		return User.of(id, username, password, withdrawn);
 	}
 }

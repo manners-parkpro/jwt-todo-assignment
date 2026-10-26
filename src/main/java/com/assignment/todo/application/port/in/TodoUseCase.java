@@ -18,4 +18,7 @@ public interface TodoUseCase {
 	TodoResult update(UpdateTodoCommand command);
 
 	void delete(Long userId, Long todoId);
+
+	// 회원 탈퇴 때 그 사용자의 TODO를 모두 지운다
+	void deleteAll(Long userId);
 }

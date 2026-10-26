@@ -25,6 +25,11 @@ class TodoRepositoryAdapter implements TodoCommandPort, TodoQueryPort {
 	}
 
 	@Override
+	public void deleteAllByUserId(Long userId) {
+		todoRepository.deleteAllByUserId(userId);
+	}
+
+	@Override
 	public Optional<Todo> findByIdAndUserId(Long id, Long userId) {
 		return todoRepository.findByIdAndUserId(id, userId).map(TodoJpaEntity::toDomain);
 	}

@@ -11,4 +11,6 @@ public interface UserUseCase {
 	UserResult getMe(Long userId);
 
 	UserResult updateMe(UpdateUserCommand command);
+
+	void withdraw(Long userId);
 }

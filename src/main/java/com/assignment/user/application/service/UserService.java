@@ -10,6 +10,7 @@ import com.assignment.user.application.port.in.UserUseCase;
 import com.assignment.user.application.port.out.PasswordHashPort;
 import com.assignment.user.application.port.out.RefreshTokenCommandPort;
 import com.assignment.user.application.port.out.UserCommandPort;
+import com.assignment.user.application.port.out.UserEventPort;
 import com.assignment.user.application.port.out.UserQueryPort;
 import com.assignment.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class UserService implements UserUseCase {
 	private final UserQueryPort userQueryPort;
 	private final PasswordHashPort passwordHashPort;
 	private final RefreshTokenCommandPort refreshTokenCommandPort;
+	private final UserEventPort userEventPort;
 
 	@Override
 	@Transactional
@@ -61,7 +63,19 @@ public class UserService implements UserUseCase {
 		return UserResult.from(userCommandPort.save(user));
 	}
 
+	// 행은 남기고 탈퇴로 표시한다(ID 재사용 방지 — User 참고). 리프레시 토큰과 TODO는 같은 트랜잭션에서 지운다
+	@Override
+	@Transactional
+	public void withdraw(Long userId) {
+		User user = findUser(userId);
+		user.withdraw();
+		userCommandPort.save(user);
+		refreshTokenCommandPort.deleteAllByUserId(userId);
+		// TODO는 todo 기능이 이 이벤트를 받아 지운다(기능 간 직접 참조 금지)
+		userEventPort.publishWithdrawn(userId);
+	}
+
 	private User findUser(Long userId) {
-		return userQueryPort.findById(userId).orElseThrow(UserNotFoundException::new);
+		return userQueryPort.findActiveById(userId).orElseThrow(UserNotFoundException::new);
 	}
 }

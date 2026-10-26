@@ -43,6 +43,7 @@ class ApiDocsTest extends IntegrationTestSupport {
 				Map.entry("POST /users/refresh", false),
 				Map.entry("GET /users/me", true),
 				Map.entry("PUT /users/me", true),
+				Map.entry("DELETE /users/me", true),
 				Map.entry("POST /todos", true),
 				Map.entry("GET /todos", true),
 				Map.entry("GET /todos/search", true),

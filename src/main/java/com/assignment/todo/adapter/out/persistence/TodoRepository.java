@@ -12,4 +12,6 @@ interface TodoRepository extends JpaRepository<TodoJpaEntity, Long> {
 
 	// Spring Data가 keyword의 %·_를 이스케이프해 like ... escape '\'로 찾는다
 	List<TodoJpaEntity> findAllByUserIdAndTitleContainingIgnoreCaseOrderByIdAsc(Long userId, String keyword);
+
+	void deleteAllByUserId(Long userId);
 }

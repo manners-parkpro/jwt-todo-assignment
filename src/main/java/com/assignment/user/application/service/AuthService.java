@@ -53,7 +53,7 @@ public class AuthService implements AuthUseCase {
 	@Override
 	@Transactional
 	public TokenResult login(LoginCommand command) {
-		User user = userQueryPort.findByUsername(command.username())
+		User user = userQueryPort.findActiveByUsername(command.username())
 				.filter(found -> passwordHashPort.matches(command.rawPassword(), found.getPassword()))
 				.orElseThrow(InvalidCredentialsException::new);
 		Instant now = Instant.now();

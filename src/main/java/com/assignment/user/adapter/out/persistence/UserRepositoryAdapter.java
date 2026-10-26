@@ -19,13 +19,13 @@ class UserRepositoryAdapter implements UserCommandPort, UserQueryPort {
 	}
 
 	@Override
-	public Optional<User> findById(Long id) {
-		return userRepository.findById(id).map(UserJpaEntity::toDomain);
+	public Optional<User> findActiveById(Long id) {
+		return userRepository.findByIdAndWithdrawnFalse(id).map(UserJpaEntity::toDomain);
 	}
 
 	@Override
-	public Optional<User> findByUsername(String username) {
-		return userRepository.findByUsername(username).map(UserJpaEntity::toDomain);
+	public Optional<User> findActiveByUsername(String username) {
+		return userRepository.findByUsernameAndWithdrawnFalse(username).map(UserJpaEntity::toDomain);
 	}
 
 	@Override

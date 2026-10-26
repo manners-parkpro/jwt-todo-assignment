@@ -7,4 +7,6 @@ public interface TodoCommandPort {
 	Todo save(Todo todo);
 
 	void delete(Todo todo);
+
+	void deleteAllByUserId(Long userId);
 }
