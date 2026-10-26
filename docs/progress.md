@@ -3,9 +3,10 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-26
-- **단계: 11단계(선택 기능 OPT-01~03) 완료 → 10단계(TEST-X1·X3·X4) 진행 중.** 사용자 지시(#14): OPT를 D-21대로 구현하고 테스트·실측으로 build green을 확인한 뒤 10단계를 진행한다(그래서 11단계를 10단계보다 먼저 했다). 설계 승인은 2026-10-25(used_prompts #2).
+- **단계: 11단계(선택 기능)·10단계(추가 테스트) 완료 → 사용자 확인 후 12단계(README).** 사용자 지시(#14)로 11단계를 10단계보다 먼저 했다. 설계 승인은 2026-10-25(used_prompts #2).
+- **제출 전 남은 실격 위험: `README.md`가 아직 없다(12단계).** README에 적을 명령(`./gradlew test`·`./gradlew bootRun`, Windows `.\gradlew.bat …`)은 CI로 3개 OS × JDK 17·21 실측을 마쳤다.
 - **제출 전 남은 실격 위험: `README.md`가 아직 없다(12단계).** 지금 제출하면 실격 조건 1("README에 적힌 명령어로 실행되지 않는 경우")에 해당한다. README에 적을 명령은 CI로 3개 OS × JDK 17·21 실측을 마쳤다.
-- 빌드·테스트: JDK 17·21 `clean build` 34건 통과(S15 — 기존 19건 + OPT-01(4)·OPT-02(6)·OPT-03(5)). CI(GitHub Actions)에서 Windows·Linux·macOS × JDK 17·21 모두 테스트·`bootRun`·API 호출 성공 — 선택 기능 커밋 `21bd2ba`·`0336d16`·`b20471c`(S15), 9단계 커밋 `97c0d75`(S14).
+- 빌드·테스트: JDK 17·21 `clean build` 45건 통과(S16 — 필수 TEST-01~04, 확장 07·08·09, 선택 X1·X2·X3·X4, API-10, OPT-01~03). 2회 연속·무작위 순서 실행 통과. CI(GitHub Actions) Windows·Linux·macOS × JDK 17·21 — 10단계 커밋 `db98c0d`까지 모두 성공.
 - 사용자 결정(S12·S13): Lombok 1.18.48(JDK 27 실격 위험 해결), 정기 교차 확인 JDK는 17·21, `memory-bank/`는 로컬에 두고 Git·ZIP에서만 제외, TTL은 yml 유지, Windows·Linux는 GitHub Actions로 실측. 서명 키 환경 변수는 `TODO_JWT_SECRET`(S13 — 흔한 이름 충돌로 기동 실패하는 위험 보강).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
@@ -21,7 +22,7 @@
 7. [x] Todo 기능 → TEST-02·04(GET·PUT·DELETE) + TEST-X2(본인 TODO만 — 명세 필수 동작이라 S10에 10단계에서 앞당김), 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인, 동시 요청으로 커넥션 풀 1개 동작 확인(R-3) — API-04~09, ERR-02·03, DB-02·03. 사용자 지시로 Result → Response 변환·네이밍 정리(D-20)를 user 기능까지 적용 (검증: S10)
 8. [x] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + TEST-09(만료, S12 추가) + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06 (검증: S12)
 9. [x] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10 (검증: S14)
-10. [ ] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
+10. [x] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04 (검증: S16, 11단계 뒤에 진행)
 11. [x] 선택 기능 OPT-01~03 구현 — D-21, OPT-01 → 02 → 03 순서로 기능마다 `[OPT-0x]` 테스트·TEST-01~04 회귀·`ApiDocsTest` 목록 갱신 (검증: S15, 사용자 지시로 10단계보다 먼저)
 12. [ ] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령 — CI로 3개 OS × JDK 17·21 확인, SQL 명령 없음, 8080 포트 사용 중일 때의 실행 방법 실측), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18
 13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08
@@ -33,6 +34,17 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-26 · S16 10단계 추가 테스트(TEST-X1·X3·X4), 반복·순서 독립 확인
+- 작성: `InvalidTokenTest`(TEST-X1 4건 — 다른 키 서명·sub 변조·alg: none·1초 전 만료), `DuplicateSignupTest`(TEST-X3), `ValidationErrorTest`(TEST-X4 6건 — 가입 4종 파라미터화·TODO 4종·읽을 수 없는 본문·숫자 아닌 ID). 운영 코드 변경 없음. 커밋 `db98c0d`, 리뷰 반영 `1e1e081`
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew test` → 45건 통과(첫 실행). JDK 17 `cleanTest test` 2회 연속 45/45, 무작위 클래스·메서드 순서(시드 20261026·7) 45/45 두 번 — 결과 XML 시각으로 순서가 실제로 섞였음을 확인, 임시 설정 파일은 삭제
+  - JDK 17·21 `clean build` → BUILD SUCCESSFUL, 45건. 테스트 DB 표 0개(create-drop), `todo.db` 미생성
+  - 변이 4종(되돌린 뒤 `cmp`): 서명을 검증하지 않는 디코더 → X1 4건 모두 실패, 시계 오차 0 설정 제거 → 1초 전 만료 건만 실패(TEST-07은 1시간 전 만료라 이 회귀를 못 잡음), 가입 중복 확인 제거 → X3 실패, TODO 생성 `@Valid` 제거 → X4 실패. 리뷰 반영 뒤 재실행해도 같음
+  - 401 거부 사유 실측: 만료 "Jwt expired at …", 다른 키·변조 "Signed JWT rejected: Invalid signature", alg: none "Unsupported algorithm of none"(디코더의 서명 없는 토큰 거부 경로) — 이 문구를 테스트에 단언
+  - CI(`db98c0d`, run 40298369548) 6개 조합 성공·스모크 6/6·경고 0
+- 독립 리뷰(`step-reviewer`): 정확성·보안·명세 결함 없음. 낮음 2건 반영 — ① TEST-X4는 필드가 모두 한 단어라 JSON 이름 변환을 구별하지 못함 → 체크리스트 근거를 "요청 필드 이름"으로 좁히고 변환 근거는 OPT-02로 적음 ② TEST-X1 변조 건·TEST-X3이 refresh_token을 읽는 도우미를 써서 확장에 묶임 → access_token 도우미·직접 가입 요청으로 바꿈. 참고 사항(거부 사유 미단언)도 반영
+- 다음: 사용자 확인 후 12단계 README(최종 API 기준, 명령 실검증)
 
 ### 2026-10-26 · S15 11단계 선택 기능(OPT-01~03) 구현·실측 — 사용자 지시 #14
 - 구현 전 재검토(보고 후 진행): D-21을 바꿀 더 나은 방안 없음.

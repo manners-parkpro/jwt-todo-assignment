@@ -40,7 +40,7 @@
 | SEC-02 | 인증 헤더 `Authorization: Bearer <token>` | 명세 인증 | `global.security` | TEST-01·03 | ✅ 유효 토큰으로 `/users/me` 200(TEST-01, S9), 헤더 없음·형식 오류 401(TEST-03, S8) |
 | SEC-03 | 액세스 토큰 만료 시간(1시간)·README 명시 (Refresh Token은 명세상 선택 → SEC-11로 구현) | 명세 인증·초안·D-06 | `auth.access-token-ttl` | 설정·README | 🟨 `exp - iat = 3600`초, 헤더 HS256, 클레임 `sub·iat·exp`뿐(S9 bootRun). README는 12단계 |
 | SEC-04 | 토큰 없이 요청하면 401 | 명세 테스트 | `global.security` | TEST-03 | ✅ 보호 경로 6개(핸들러는 6·7단계) 토큰 없음 401(TEST-03, S8 JDK 17·21) |
-| SEC-05 | 무효·만료 토큰 → 401 (clock skew 0) | 초안·D-05 | `JwtDecoder` | TEST-X1, TEST-07 | ⬜ |
+| SEC-05 | 무효·만료 토큰 → 401 (clock skew 0) | 초안·D-05 | `JwtDecoder` | TEST-X1, TEST-07 | ✅ `InvalidTokenTest`(TEST-X1, S16) — 다른 키 서명·sub 변조·alg: none·1초 전 만료 모두 401·`invalid_token`·거부 사유(Invalid signature·Unsupported algorithm of none·expired) 확인. 시계 오차 0 설정을 지운 변이에서 1초 전 만료 건만 실패(TEST-07의 1시간 전 만료로는 잡히지 않음), 서명 미검증 디코더 변이에서 4건 모두 실패 |
 | SEC-06 | 비밀번호 평문 저장 금지 (DelegatingPasswordEncoder) | 초안·D-09 | `PasswordHashAdapter` | DB 값이 `{bcrypt}` 접두 해시인지 확인 | ✅ 저장값 `{bcrypt}$2a$10$…`(68자, S9 sqlite3) |
 | SEC-07 | 서명 키 하드코딩 금지(미설정 시 임의 키 생성)·README 설명 | 초안·D-06 | `application.yaml`, JWT 설정 | grep 점검, README | 🟨 `JwtConfig` — 미설정 시 임의 키+WARN, Base64 아님·32바이트 미만은 기동 실패, 로그에 키 값 없음(S8 bootRun). README 설명은 12단계 |
 | SEC-08 | 인증 로직은 공통 보안 구성 (컨트롤러별 중복 금지) | 초안 | `SecurityFilterChain` | 코드 리뷰 | ✅ `SecurityConfig` 하나로 구성(S8), user·todo 컨트롤러는 `@CurrentUserId`만 사용하고 토큰을 직접 파싱하지 않음(S9·S10 독립 리뷰) |
@@ -55,7 +55,7 @@
 | ERR-01 | 인증 없이 보호 API 호출 → 401 | 명세 테스트 | `global.security` | TEST-03 | ✅ ProblemDetail 401 + `WWW-Authenticate: Bearer`(TEST-03, S8) |
 | ERR-02 | 존재하지 않는 TODO ID → 404 | 명세 테스트 | todo, `global.error` | TEST-04 | ✅ GET·PUT·DELETE 모두 404 ProblemDetail(TEST-04, S10) |
 | ERR-03 | 성공 코드: 생성 201 · 조회 200 · 수정 200 · 삭제 204 | 초안·D-07 | 컨트롤러 | TEST-01·02 | ✅ 가입 201·로그인 200·내 정보 200(TEST-01), TODO 생성 201·조회 200·수정 200·삭제 204(TEST-02, S10) |
-| ERR-04 | 명세 외 응답 형식·상태 코드의 일관성(ProblemDetail, 400·409) | 초안·D-07 | `global.error` | TEST-X3·X4 | 🟨 401·404 ProblemDetail(S8·S10), 400은 검증 실패만 `errors`·읽을 수 없는 본문은 기본 detail(S9·S10), 409(S9), 415·405 `application/problem+json`(S10 재확인). 테스트는 10단계(TEST-X3·X4) |
+| ERR-04 | 명세 외 응답 형식·상태 코드의 일관성(ProblemDetail, 400·409) | 초안·D-07 | `global.error` | TEST-X3·X4 | ✅ 409 ProblemDetail(`DuplicateSignupTest` TEST-X3), 400 검증 실패는 `errors` 1건·요청 필드 이름·고정 한국어 메시지(`ValidationErrorTest` TEST-X4 — 가입 4종·TODO 4종), 읽을 수 없는 본문·숫자 아닌 ID는 `errors` 없는 400 ProblemDetail(TEST-X4), 401·404 ProblemDetail(TEST-03·04). 자바 이름 → JSON 이름 변환(`new_password`·`current_password`)은 `UserUpdateTest`(OPT-02)가 확인 — TEST-X4의 필드는 모두 한 단어라 변환을 구별하지 못한다(S16 리뷰) |
 
 ## 5. DB (DB)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -74,15 +74,15 @@
 | TEST-02 | TODO 생성 → 목록 조회 → 수정 → 삭제 | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoCrudFlowTest` — 생성 201·Location → 목록 1건 → 수정 200·재조회 반영 → 삭제 204 → 단건 404·목록 0건(S10, JDK 17·21) |
 | TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ✅ `AuthenticationRequiredTest` — 보호 경로 6개(핸들러는 6·7단계) 토큰 없음·형식 오류 토큰 401, ProblemDetail·`WWW-Authenticate` 검증(S8, JDK 17·21 7건 통과) |
 | TEST-04 | 존재하지 않는 TODO ID로 요청하면 404 — `{id}`를 받는 GET·PUT·DELETE 모두(S10) | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoNotFoundTest` — `Long.MAX_VALUE` ID로 GET·PUT·DELETE 모두 404·ProblemDetail·같은 메시지(S10, JDK 17·21) |
-| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S15: 34건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2·API-10(2)·OPT-01(4)·OPT-02(6)·OPT-03(5)), CI에서 3개 OS × JDK 17·21 통과. TEST-X1·X3·X4는 10단계 |
-| TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ⬜ |
+| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | ✅ `./gradlew test`로 45건 실행·통과(S16 — 필수 TEST-01~04, 확장 07·08·09, 선택 X1(4)·X2·X3·X4(6), API-10(2), OPT-01(4)·02(6)·03(5), contextLoads). CI에서 3개 OS × JDK 17·21 통과. README 명령으로 최종 확인은 12단계 |
+| TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ✅ JDK 17 `cleanTest test` 2회 연속 45/45, 무작위 클래스·메서드 순서(시드 20261026·7, 임시 `junit-platform.properties` — 실행 뒤 삭제) 45/45 두 번, JDK 17·21 `clean build` 45건(S16). 테스트 DB는 끝난 뒤 표 0개(create-drop), `todo.db` 미생성 |
 | TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `TokenRefreshFlowTest` — 서버 키로 만든 만료 토큰 401(`invalid_token`) → 만료 토큰을 헤더에 단 재발급 200 → 새 토큰으로 `/users/me` 200·같은 id(S12, JDK 17·21) |
 | TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `RefreshTokenRotationTest` — 재발급마다 토큰 교체, 쓴 토큰 재사용 401(`WWW-Authenticate`·ProblemDetail), 이후 최신 토큰도 401(S12, JDK 17·21) |
 | TEST-09 | (확장) 만료된 리프레시 토큰과 없는 토큰도 이미 쓴 토큰과 같은 401 — 수명 0초 별도 컨텍스트(S12 구현 전 재검토로 추가) | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `RefreshTokenExpiryTest`(S12). 만료 확인을 지운 변이에서 실패함을 확인 |
-| TEST-X1 | (선택) 위조 서명·만료 토큰 → 401 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
+| TEST-X1 | (선택) 위조 서명·만료 토큰 → 401 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ✅ `InvalidTokenTest` 4건(S16) — 위 SEC-05 근거. 확장 기능(refresh_token)에 의존하지 않음(리뷰 반영) |
 | TEST-X2 | (선택) 타인 TODO 조회·수정·삭제 → 404, 목록에 없음, 소유자 데이터 불변 — API-09(명세 필수 동작) 검증이라 7단계에서 작성(S10) | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ✅ `TodoOwnershipTest`(S10). 소유자 조건을 지운 변이에서 이 테스트만 실패함을 확인 |
-| TEST-X3 | (선택) username 중복 가입 → 409 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
-| TEST-X4 | (선택) 입력 검증 실패 → 400 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
+| TEST-X3 | (선택) username 중복 가입 → 409 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ✅ `DuplicateSignupTest`(S16) — 409·ProblemDetail·기존 계정 비밀번호 유지. 중복 확인을 지운 변이에서 실패 |
+| TEST-X4 | (선택) 입력 검증 실패 → 400 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ✅ `ValidationErrorTest` 6건(S16) — 위 ERR-04 근거. TODO 생성 `@Valid`를 지운 변이에서 실패 |
 
 필수 시나리오 단계 — 4종을 먼저 완성한 뒤 TEST-07·08, TEST-X를 작성한다. 필수 4종은 확장 기능(Refresh Token)과 독립이며, 확장 구현 후 회귀를 확인한다(D-15).
 - **TEST-01**: 가입 → 로그인 → 응답의 `access_token` 추출 → `Authorization: Bearer <token>`으로 `GET /users/me` → 성공 상태와 사용자 정보 검증
