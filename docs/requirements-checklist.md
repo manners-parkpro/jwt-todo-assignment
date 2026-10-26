@@ -30,7 +30,7 @@
 | API-07 | `PUT /todos/{id}` 수정 | 명세 구현 API | todo | TEST-02 | ✅ 전체 교체 200·재조회 반영, 없는 ID 404, `completed` 누락 400(TEST-02·04, S10 bootRun) |
 | API-08 | `DELETE /todos/{id}` 삭제 | 명세 구현 API | todo | TEST-02 | ✅ 204(본문 없음), 이후 단건 404·목록 미포함(TEST-02, S10) |
 | API-09 | 로그인한 사용자 본인의 TODO만 다룬다 — 타인 TODO는 404로 은닉 | 명세 구현 API·D-08 | todo service·persistence | TEST-X2(명세 필수 동작이라 7단계에서 작성 — S10) | ✅ 타인 TODO 조회·수정·삭제 404·목록 미포함·소유자 데이터 불변(TEST-X2), 본문에 다른 사용자의 `userId`를 넣어도 요청자 소유로 저장(S10 재확인, sqlite3) |
-| API-10 | API 문서(springdoc Swagger UI) — 보호 API에만 Bearer 요구 표시 | 설계·D-02 | `global/config`, 컨트롤러 | `/v3/api-docs` 확인 | ✅ `OpenApiConfig`(`bearerAuth` HTTP bearer)·보호 API 6개에만 `@SecurityRequirement`, `POST /todos` 201 문서화. `ApiDocsTest` 2건 — 보안 요구는 값(`[{bearerAuth: []}]`)까지 비교(보안 표시 제거·다른 스키마 이름·201 명시 제거 변이에서 각각 실패 확인). 헤드리스 Chrome Swagger UI: 자물쇠 6개, Authorize 뒤 `GET /users/me` 200·`POST /todos` 201 + `Location`, 로그인은 Bearer 헤더 없이 200(S14) |
+| API-10 | API 문서(springdoc Swagger UI) — 보호 API에만 Bearer 요구 표시 | 설계·D-02 | `global/config`, 컨트롤러 | `/v3/api-docs` 확인 | ✅ `OpenApiConfig`(`bearerAuth` HTTP bearer)·보호 API 6개에만 `@SecurityRequirement`, `POST /todos` 201 문서화. `ApiDocsTest` 2건 — 보안 요구는 값(`[{bearerAuth: []}]`)까지 비교(보안 표시 제거·다른 스키마 이름·201 명시 제거 변이에서 각각 실패 확인). 헤드리스 Chrome Swagger UI: 자물쇠 6개, Authorize 뒤 `GET /users/me` 200·`POST /todos` 201 + `Location`, 로그인은 Bearer 헤더 없이 200(S14) 선택 API 3개를 더한 뒤(S15) 문서의 API 12개 중 보호 9개에만 `bearerAuth` — `ApiDocsTest` 목록 갱신 |
 | API-11 | `POST /users/refresh` 리프레시 토큰으로 새 토큰 쌍 재발급 — 액세스 토큰 만료·서버 재시작 후 API 재호출 | 요청·D-15 | user(Auth) | TEST-07·08 | ✅ 200 새 토큰 쌍, 회전·재사용 401·만료·없는 토큰 401(TEST-07·08·09), 서버 재시작 뒤에도 재발급 200 → API 200(S12 bootRun) |
 
 ## 3. 인증·보안 (SEC)
@@ -74,7 +74,7 @@
 | TEST-02 | TODO 생성 → 목록 조회 → 수정 → 삭제 | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoCrudFlowTest` — 생성 201·Location → 목록 1건 → 수정 200·재조회 반영 → 삭제 204 → 단건 404·목록 0건(S10, JDK 17·21) |
 | TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ✅ `AuthenticationRequiredTest` — 보호 경로 6개(핸들러는 6·7단계) 토큰 없음·형식 오류 토큰 401, ProblemDetail·`WWW-Authenticate` 검증(S8, JDK 17·21 7건 통과) |
 | TEST-04 | 존재하지 않는 TODO ID로 요청하면 404 — `{id}`를 받는 GET·PUT·DELETE 모두(S10) | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoNotFoundTest` — `Long.MAX_VALUE` ID로 GET·PUT·DELETE 모두 404·ProblemDetail·같은 메시지(S10, JDK 17·21) |
-| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S14: 19건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2·API-10(2)), CI에서 3개 OS × JDK 17·21 통과(S13). TEST-X1·X3·X4는 10단계 |
+| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S15: 34건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2·API-10(2)·OPT-01(4)·OPT-02(6)·OPT-03(5)), CI에서 3개 OS × JDK 17·21 통과. TEST-X1·X3·X4는 10단계 |
 | TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ⬜ |
 | TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `TokenRefreshFlowTest` — 서버 키로 만든 만료 토큰 401(`invalid_token`) → 만료 토큰을 헤더에 단 재발급 200 → 새 토큰으로 `/users/me` 200·같은 id(S12, JDK 17·21) |
 | TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `RefreshTokenRotationTest` — 재발급마다 토큰 교체, 쓴 토큰 재사용 401(`WWW-Authenticate`·ProblemDetail), 이후 최신 토큰도 401(S12, JDK 17·21) |
@@ -111,9 +111,9 @@
 ## 8. 선택 사항 — 가산점 (OPT, 필수 완료 후 결정 — D-14)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| OPT-01 | `GET /todos/search?keyword=` 제목으로 검색 — 본인 것만·id 오름차순·`%`/`_` 문자 그대로 | 명세 선택 사항·D-21 | todo(웹·유스케이스·조회 포트) | `[OPT-01]` 테스트, bootRun | 🟨 설계 완료(D-21, S14) — 구현은 사용자 승인 후 11단계 |
-| OPT-02 | `PUT /users/me` 회원정보 수정 — 현재 비밀번호 먼저 확인(틀리면 400), username 중복 409, 비밀번호 변경 시 리프레시 토큰 전부 폐기 | 명세 선택 사항·D-21 | user(웹·유스케이스·도메인) | `[OPT-02]` 테스트, bootRun | 🟨 설계 완료(D-21, S14) — 구현은 사용자 승인 후 11단계 |
-| OPT-03 | `DELETE /users/me` 탈퇴 — 행을 지우지 않고 `withdrawn` 표시(ID 재사용 방지), 같은 트랜잭션에서 리프레시 토큰·TODO 삭제(TODO는 `global.event` 이벤트) | 명세 선택 사항·D-21 | user·todo(이벤트)·`users.withdrawn` | `[OPT-03]` 테스트(새 가입자가 탈퇴자 ID를 받지 않음 포함), bootRun `.schema` | 🟨 설계 완료(D-21, S14) — 구현은 사용자 승인 후 11단계 |
+| OPT-01 | `GET /todos/search?keyword=` 제목으로 검색 — 본인 것만·id 오름차순·`%`/`_` 문자 그대로 | 명세 선택 사항·D-21 | todo(웹·유스케이스·조회 포트) | `[OPT-01]` 테스트, bootRun | ✅ `TodoSearchTest` 4건(S15) — 본인 것·제목만·id 순·대소문자 무시, `%`·`_` 문자 그대로, 검색어 없음·공백·101자 400, 401. 변이 3종 검출(이스케이프 없는 Like·소유자 조건·`@Valid`). bootRun: SQL `user_id=? and upper(title) like upper(?) escape '\'`, 다른 사용자 TODO 제외, Swagger 쿼리 파라미터 표시. CI 성공(`21bd2ba`) |
+| OPT-02 | `PUT /users/me` 회원정보 수정 — 현재 비밀번호 먼저 확인(틀리면 400), username 중복 409, 비밀번호 변경 시 리프레시 토큰 전부 폐기 | 명세 선택 사항·D-21 | user(웹·유스케이스·도메인) | `[OPT-02]` 테스트, bootRun | ✅ `UserUpdateTest` 6건(S15) — 새 정보로만 로그인·옛 refresh_token 401, new_password 생략 시 유지·자기 username 허용, 현재 비밀번호 틀림 400이 중복 409보다 먼저·변경 없음, 409, 짧은·공백·72바이트 초과 400, 401. 변이 7종 검출. bootRun: DB 해시 교체·옛 이름 행 0·옛 리프레시 토큰 401. CI 성공(`0336d16`) |
+| OPT-03 | `DELETE /users/me` 탈퇴 — 행을 지우지 않고 `withdrawn` 표시(ID 재사용 방지), 같은 트랜잭션에서 리프레시 토큰·TODO 삭제(TODO는 `global.event` 이벤트) | 명세 선택 사항·D-21 | user·todo(이벤트)·`users.withdrawn` | `[OPT-03]` 테스트(새 가입자가 탈퇴자 ID를 받지 않음 포함), bootRun `.schema` | ✅ `UserWithdrawalTest` 5건(S15) — 로그인·재발급 401·`/users/me`·PUT·DELETE 404, 내 TODO만 삭제, 새 가입자가 탈퇴자 ID를 받지 않음·탈퇴자 토큰으로 새 계정 접근 불가, username 재가입 409, 401. 변이 6종 검출(하드 삭제 포함). bootRun: `withdrawn boolean default false not null`, 마지막 가입자 탈퇴 뒤 새 가입자 다음 ID, 이전 버전 `todo.db`에 열 추가(ALTER)·기존 계정 정상, 리스너 실패 시 전체 롤백. CI 성공(`b20471c`) |
 
 ## 9. 미해결·위험
 | ID | 내용 | 조치 |
@@ -130,6 +130,6 @@
 | R-10 | 도구가 프로젝트 루트에 `memory-bank/`(템플릿·파일 목록)를 다시 만들었다(S11, 09:22) — 커밋·ZIP에 섞일 수 있다 | 해결(S12, 사용자 결정): 폴더는 두고 `.gitignore`와 SKILL ZIP 제외 목록에 추가, `git check-ignore`·시험 ZIP으로 확인 |
 | R-11 | 채점자 셸에 다른 제출물용 `JWT_SECRET`(흔한 이름)이 남아 있으면 형식 검사(Base64·32바이트)로 README 실행 명령이 기동에 실패한다(실격 조건 1, S13 실측) | 해결(S13): 환경 변수를 이 프로젝트 전용 `TODO_JWT_SECRET`으로 변경(D-06) — `JWT_SECRET`만 있으면 무시하고 기동·가입 201, 전용 이름에 잘못된 값이면 기동 실패, 올바른 값이면 기동·가입 201 |
 | R-12 | 이 PC(macOS)에서는 README의 Windows 명령(`.\gradlew.bat`)과 Linux 실행을 확인할 수 없다(D-18) | 해결(S13, 사용자 결정): GitHub Actions에서 Windows·Linux·macOS × JDK 17·21로 테스트·실행·API 호출 실측 — 6개 조합 성공(run 40277959532). README 명령을 바꾸면 CI 스모크도 맞춘다(`docs.md`) |
-| R-13 | 선택 기능 탈퇴(OPT-03)를 행 삭제로 만들면 SQLite가 지운 마지막 사용자 ID를 새 가입자에게 다시 준다 — 탈퇴자의 남은 액세스 토큰(`sub` = ID, 최대 1시간)이 새 계정에 닿는다(sqlite3 재현: id 3 삭제 → 새 가입자 id 3). Hibernate SQLite 방언은 `AUTOINCREMENT`를 붙일 수 없다(소스) | 설계(D-21, S14): 행을 지우지 않고 `withdrawn` 표시(탈퇴 표시만 하면 새 가입자 id 4 — sqlite3 확인). 구현 시 `[OPT-03]` 테스트로 확인 |
+| R-13 | 선택 기능 탈퇴(OPT-03)를 행 삭제로 만들면 SQLite가 지운 마지막 사용자 ID를 새 가입자에게 다시 준다 — 탈퇴자의 남은 액세스 토큰(`sub` = ID, 최대 1시간)이 새 계정에 닿는다(sqlite3 재현: id 3 삭제 → 새 가입자 id 3). Hibernate SQLite 방언은 `AUTOINCREMENT`를 붙일 수 없다(소스) | 해결(S15): 행을 지우지 않고 `withdrawn` 표시 — `[OPT-03]` 테스트(하드 삭제 변이에서 실패), bootRun(마지막 가입자 탈퇴 뒤 새 가입자 다음 ID·탈퇴자 토큰 404) |
 
 해결됨(2026-10-25): 원문 명세 확보·대조, Lombok·springdoc 유지 결정, `memory-bank/` 삭제, Git 저장소 초기화와 원격 연결.

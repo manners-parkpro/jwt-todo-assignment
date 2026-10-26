@@ -31,7 +31,7 @@ paths:
 ## 테이블
 | 테이블 | 컬럼 | 제약·인덱스 |
 |---|---|---|
-| `users` | `id`, `username`, `password`, `withdrawn`(선택 OPT-03 설계 — 구현 전) | `username` 유니크(탈퇴자 포함) |
+| `users` | `id`, `username`, `password`, `withdrawn`(OPT-03, `default false`) | `username` 유니크(탈퇴자 포함) |
 | `todos` | `id`, `user_id`, `title`, `description`, `completed` | `user_id` 인덱스 |
 | `refresh_tokens` | `id`, `user_id`, `token_hash`, `expires_at`(epoch ms), `used` | `token_hash` 유니크, `user_id` 인덱스 |
 
@@ -39,7 +39,7 @@ paths:
 - `adapter.out.persistence` 안에만 둔다. `protected` 기본 생성자, setter 없음, `from(domain)`/`toDomain()` 변환 메서드.
 - 이름(D-20): 엔티티 `<대상>JpaEntity`, Spring Data 인터페이스 `<대상>Repository`, 이를 주입해 `<대상>CommandPort`·`<대상>QueryPort`를 함께 구현하는 `<대상>RepositoryAdapter`.
 - 조회 메서드에는 소유자 조건을 넣는다: `findByIdAndUserId`, `findAllByUserIdOrderByIdAsc`. 사용자 ID 필드는 두 테이블 모두 `userId`(컬럼 `user_id`)로 쓰며, Boot 기본 명명 전략이 바꿔 주므로 `@Column(name)`을 붙이지 않는다. 사용자는 `findByUsername`, `existsByUsername`. 리프레시 토큰은 `findByTokenHash`, `deleteAllByUserId`, `deleteAllByUserIdAndExpiresAtLessThanEqual`(만료 기준 "현재 ≥ 만료 시각"과 맞춘다).
-- 선택 기능(D-21 설계, 구현 전): 검색 `findAllByUserIdAndTitleContainingIgnoreCaseOrderByIdAsc`(Spring Data가 `%`·`_`를 이스케이프), 탈퇴 `findByIdAndWithdrawnFalse`·`findByUsernameAndWithdrawnFalse`(로그인·내 정보), TODO `deleteAllByUserId`.
+- 선택 기능(D-21): 검색 `findAllByUserIdAndTitleContainingIgnoreCaseOrderByIdAsc`(Spring Data가 `%`·`_`를 이스케이프), 탈퇴 `findByIdAndWithdrawnFalse`·`findByUsernameAndWithdrawnFalse`(로그인·내 정보), TODO `deleteAllByUserId`.
 - 네이티브 쿼리(`@NativeQuery`, `nativeQuery = true`)와 요청값으로 만든 `Sort`·`Pageable`은 쓰지 않는다. 정렬은 메서드 이름에 고정한다(CVE-2026-47834 전제 회피).
 
 ## 검증

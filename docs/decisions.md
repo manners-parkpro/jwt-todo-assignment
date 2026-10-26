@@ -27,7 +27,7 @@
 | D-18 | README의 Windows 명령 범위 | 확정(S13 CI 실측) |
 | D-19 | 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 | 확정 |
 | D-20 | 계층 간 DTO(Command·Result)와 네이밍 규칙(참고 프로젝트) | 확정 |
-| D-21 | 선택 사항(가산점) 설계 — 제목 검색·회원정보 수정·탈퇴(soft delete)·기능 간 이벤트 | 설계 확정(구현은 사용자 승인 후 11단계) |
+| D-21 | 선택 사항(가산점) 설계 — 제목 검색·회원정보 수정·탈퇴(soft delete)·기능 간 이벤트 | 확정(S15 구현·실측 완료) |
 
 ---
 
@@ -208,11 +208,11 @@
 - **비용**: record 6개·포트 2개 증가(user·todo). API 동작은 같고 HTTP 통합 테스트로 회귀를 확인한다.
 - **대안**: 도메인 반환 유지(파일은 적지만 웹 ↔ 도메인 결합) · Request/Response까지 참고 구조대로 분리(package-private 경계 포기).
 
-### D-21 선택 사항(가산점) 설계 — 설계 확정(구현은 사용자 승인 후 11단계)
+### D-21 선택 사항(가산점) 설계 — 확정(사용자 승인 #14, S15 구현·실측 완료)
 - **공통**: 필수 API·TEST-01~04를 바꾸지 않는다(D-15와 같은 보호). 새 API의 401 확인도 TEST-03을 고치지 않고 각 기능 테스트에 둔다. 기능마다 구현 → 테스트 → TEST-01~04 회귀 → `ApiDocsTest` 목록 갱신 → `bootRun` 확인을 한 번에 하나씩 한다(OPT-01 → 02 → 03, 스키마 변경이 없는 것부터).
 - **OPT-01 제목 검색** `GET /todos/search?keyword=`(인증) → 200 `[Todo]`:
   - 본인 TODO 중 제목에 검색어가 들어간 것만 id 오름차순으로 돌려준다(없으면 `[]`). ASCII 대소문자는 구분하지 않고, `%`·`_`는 문자 그대로 찾는다 — Spring Data JPA 3.5.13의 `Containing`이 값을 `\`로 이스케이프하고 `like … escape '\'`로 질의한다(소스 확인).
-  - 입력: `keyword` 필수·공백 불가·100자 이하(제목 최대 길이). 요청 record `TodoSearchRequest`를 `@Valid @ParameterObject`로 받는다 — 레코드 `@ModelAttribute`의 검증 실패는 `MethodArgumentNotValidException`이라(Spring 6.2.19 소스 확인) 기존 오류 형식(`errors[].field = keyword`)을 그대로 쓴다.
+  - 입력: `keyword` 필수·공백 불가·100자 이하(제목 최대 길이). 요청 record `SearchTodoRequest`(D-20 `<동작><대상>Request` — S15 리뷰 지적으로 이름 정정)를 `@Valid @ParameterObject`로 받는다 — 레코드 `@ModelAttribute`의 검증 실패는 `MethodArgumentNotValidException`이라(Spring 6.2.19 소스 확인) 기존 오류 형식(`errors[].field = keyword`)을 그대로 쓴다.
   - `/todos/search`는 리터럴 경로라 `/todos/{id}`보다 먼저 매칭된다.
   - 구현: `TodoUseCase.search(userId, keyword)`, `TodoQueryPort.findAllByUserIdAndTitleContaining`, `TodoRepository.findAllByUserIdAndTitleContainingIgnoreCaseOrderByIdAsc`.
 - **OPT-02 회원정보 수정** `PUT /users/me`(인증) → 200 `{id, username}`:
@@ -231,11 +231,16 @@
   - 이벤트는 동기 `@EventListener`라 같은 트랜잭션·커넥션에서 실행된다. TODO 삭제가 실패하면 탈퇴 전체가 롤백된다. `@TransactionalEventListener(AFTER_COMMIT)`는 원자성이 깨져 쓰지 않는다.
   - 스키마: `users.withdrawn boolean default false not null`(`@ColumnDefault("false")`). 기본값이 없으면 기존 `todo.db`에 열을 더하는 `ddl-auto: update`가 SQLite에서 실패한다(sqlite3 확인: "Cannot add a NOT NULL column with default value NULL"). Hibernate 스키마 갱신은 기존 표에 `alter table … add column`을 시도한다(`StandardTableMigrator`).
   - 조회 포트: 로그인·내 정보는 탈퇴하지 않은 사용자만 찾는 `findActiveById`·`findActiveByUsername`(`…AndWithdrawnFalse`)로 바꾼다. `existsByUsername`은 탈퇴자를 포함한다.
-  - 알려진 한계(수용): 탈퇴 전에 받은 액세스 토큰은 만료(최대 1시간)까지 TODO API를 호출할 수 있다. 그 ID는 다시 쓰이지 않으므로 다른 사용자에게 닿지 않는다. 막으려면 요청마다 사용자 상태를 조회해야 하고, 그러면 필수 API의 인증 경로가 바뀐다.
+  - 알려진 한계(수용): 탈퇴 전에 받은 액세스 토큰은 만료(최대 1시간)까지 TODO API를 호출할 수 있고, 그때 만든 TODO는 탈퇴 이벤트가 이미 지나간 뒤라 지워지지 않고 남는다. 그 ID는 다시 쓰이지 않으므로 다른 사용자에게 닿지 않는다. 막으려면 요청마다 사용자 상태를 조회해야 하고, 그러면 필수 API의 인증 경로가 바뀐다.
 - **테스트**(이름에 `[OPT-0x]`):
   - 검색: 본인 것만·제목만·id 순, `%`·`_` 문자 그대로, 검색어 없음·공백 400, 토큰 없음 401.
   - 수정: 새 정보로 로그인 200, 옛 비밀번호 401, 비밀번호를 바꾸면 옛 refresh_token 401, 현재 비밀번호가 틀리면 400이고 아무것도 바뀌지 않음, username 중복 409.
   - 탈퇴: 204 → 로그인 401·재발급 401·`/users/me` 404, TODO 삭제(다른 사용자 TODO는 그대로), 같은 username 재가입 409. **새 가입자가 탈퇴자의 ID를 받지 않고, 탈퇴자 토큰으로 새 계정에 접근할 수 없음**을 확인한다.
+- **구현 결과(S15)**: OPT-01 → 02 → 03을 기능마다 커밋(`21bd2ba`·`0336d16`·`b20471c`, 리뷰 반영 `f923d77`·`6b5bec6`). 테스트 [OPT-01] 4·[OPT-02] 6·[OPT-03] 5건, JDK 17·21 `clean build` 34건 통과, 기능 커밋 3개는 CI 3개 OS × JDK 17·21 성공(스모크 6/6, 경고 0).
+  - 변이 시험 17종 중 16종을 해당 테스트 실패로 검출(되돌린 뒤 `cmp`): 이스케이프 없는 Like·소유자 조건 제거·`@Valid` 제거·현재 비밀번호 확인 제거·확인 순서 뒤바꿈·토큰 폐기 제거·비밀번호 미변경에도 폐기·공백 비밀번호 허용·자기 username 중복 판정·새 비밀번호 72바이트 검증 제거(bcrypt 예외)·하드 삭제(새 가입자가 같은 ID를 받아 실패)·이벤트 제거·탈퇴 시 토큰 삭제 제거·탈퇴자 로그인 허용·탈퇴자 조회 허용·`AFTER_COMMIT` 리스너(TODO가 지워지지 않음). 나머지 1종인 `IgnoreCase` 제거 변이는 통과 — SQLite `LIKE`가 원래 ASCII 대소문자를 구분하지 않아 생성 SQL의 결과가 같다(이름은 의도 표기·DB 독립성 때문에 둔다). 검색 결과 순서도 SQLite가 `user_id` 인덱스 순서로 읽어 `OrderByIdAsc`를 빼도 같게 나온다(목록 API-05와 같은 수준 — 정렬은 메서드 이름으로 고정).
+  - bootRun 실측: 검색 SQL `where user_id=? and upper(title) like upper(?) escape '\' order by id`, 수정 뒤 DB 해시 교체·옛 리프레시 토큰 401, 탈퇴 뒤 `withdrawn=1`·TODO·리프레시 토큰 0행·같은 username 재가입 409, **마지막 가입자가 탈퇴한 뒤 새 가입자는 다음 ID**(id 2 탈퇴 → 새 가입자 id 3, 탈퇴자 토큰의 `/users/me` 404).
+  - 기존 DB 호환: OPT-03 이전 버전으로 만든 `todo.db`에 새 버전을 띄우자 `alter table users add column withdrawn boolean default false not null`이 실행되고 기존 계정 로그인·기존 TODO 조회·탈퇴가 정상(경고·오류 0건).
+  - 원자성: 리스너가 TODO를 지운 직후 예외를 던지게 잠시 바꾸자 탈퇴 요청은 500(일반 오류 본문)이고 `withdrawn`·리프레시 토큰·TODO가 모두 그대로 남았다(롤백) — 원복 후 `cmp` 일치.
 - **대안**:
   - 하드 삭제 — AUTOINCREMENT를 쓸 수 없어 ID 재사용으로 계정 탈취 경로가 생긴다.
   - 요청마다 사용자 존재·토큰 발급 시각 확인 — 필수 API 인증 경로가 바뀌고 요청마다 조회한다.

@@ -3,9 +3,9 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-26
-- **단계: 9단계(Swagger) 완료, 사용자 지시 #13 점검 완료 → 사용자 확인 대기.** 확인할 것: 10단계(TEST-X1·X3·X4) 진행, 선택 사항 OPT-01~03 구현 승인(설계 D-21). 설계 승인은 2026-10-25(used_prompts #2).
+- **단계: 11단계(선택 기능 OPT-01~03) 완료 → 10단계(TEST-X1·X3·X4) 진행 중.** 사용자 지시(#14): OPT를 D-21대로 구현하고 테스트·실측으로 build green을 확인한 뒤 10단계를 진행한다(그래서 11단계를 10단계보다 먼저 했다). 설계 승인은 2026-10-25(used_prompts #2).
 - **제출 전 남은 실격 위험: `README.md`가 아직 없다(12단계).** 지금 제출하면 실격 조건 1("README에 적힌 명령어로 실행되지 않는 경우")에 해당한다. README에 적을 명령은 CI로 3개 OS × JDK 17·21 실측을 마쳤다.
-- 빌드·테스트: JDK 17·21 `clean build` 19건 통과(S14 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2·API-10(2)). CI(GitHub Actions)에서 Windows·Linux·macOS × JDK 17·21 모두 테스트·`bootRun`·API 호출 성공 — 9단계 커밋 `97c0d75` run 40289889584(S14), 이전 run 40277959532·40286963395.
+- 빌드·테스트: JDK 17·21 `clean build` 34건 통과(S15 — 기존 19건 + OPT-01(4)·OPT-02(6)·OPT-03(5)). CI(GitHub Actions)에서 Windows·Linux·macOS × JDK 17·21 모두 테스트·`bootRun`·API 호출 성공 — 선택 기능 커밋 `21bd2ba`·`0336d16`·`b20471c`(S15), 9단계 커밋 `97c0d75`(S14).
 - 사용자 결정(S12·S13): Lombok 1.18.48(JDK 27 실격 위험 해결), 정기 교차 확인 JDK는 17·21, `memory-bank/`는 로컬에 두고 Git·ZIP에서만 제외, TTL은 yml 유지, Windows·Linux는 GitHub Actions로 실측. 서명 키 환경 변수는 `TODO_JWT_SECRET`(S13 — 흔한 이름 충돌로 기동 실패하는 위험 보강).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
@@ -22,7 +22,7 @@
 8. [x] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + TEST-09(만료, S12 추가) + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06 (검증: S12)
 9. [x] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10 (검증: S14)
 10. [ ] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
-11. [ ] 선택 기능 OPT-01~03 구현 — 설계 D-21(S14) 확정, 사용자 승인 후 OPT-01 → 02 → 03 순서로 기능마다 `[OPT-0x]` 테스트·TEST-01~04 회귀·`ApiDocsTest` 목록 갱신 — D-14·D-21
+11. [x] 선택 기능 OPT-01~03 구현 — D-21, OPT-01 → 02 → 03 순서로 기능마다 `[OPT-0x]` 테스트·TEST-01~04 회귀·`ApiDocsTest` 목록 갱신 (검증: S15, 사용자 지시로 10단계보다 먼저)
 12. [ ] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령 — CI로 3개 OS × JDK 17·21 확인, SQL 명령 없음, 8080 포트 사용 중일 때의 실행 방법 실측), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18
 13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08
 
@@ -33,6 +33,32 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-26 · S15 11단계 선택 기능(OPT-01~03) 구현·실측 — 사용자 지시 #14
+- 구현 전 재검토(보고 후 진행): D-21을 바꿀 더 나은 방안 없음.
+  - 하드 삭제 + AUTOINCREMENT는 방언에서 불가, 요청마다 사용자 상태 조회는 필수 인증 경로 변경, username 해제는 기존 열 NOT NULL을 SQLite가 바꿀 수 없어 기각.
+  - 로그인 타이밍 차이는 가입 API가 409로 존재를 알려 주므로 바꾸지 않음.
+  - 구현 세부 4가지: 새 비밀번호 공백 거부, 미사용 조회 메서드 정리, 테스트 도우미는 추가만, 기존 DB 열 추가 실측.
+- 구현·커밋(기능마다 테스트·회귀·실측 후):
+  - OPT-01 검색 `21bd2ba`, OPT-02 수정 `0336d16`, OPT-03 탈퇴 `b20471c`.
+  - 리뷰 반영: `f923d77`(요청 DTO 이름 `SearchTodoRequest`), `6b5bec6`(새 비밀번호 72바이트 테스트).
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew test`: OPT-01 뒤 23건, OPT-02 뒤 29건, OPT-03 뒤 34건 통과. JDK 21 `clean build`도 기능마다 같은 건수 통과. CI 3개 OS × JDK 17·21은 기능 커밋 3개 모두 성공(스모크 6/6, 경고 0).
+  - 변이 17종(되돌린 뒤 `cmp`): 16종 검출. `IgnoreCase` 제거는 통과 — SQLite `LIKE`가 원래 ASCII 대소문자를 구분하지 않음(D-21).
+  - bootRun 실측(스크래치 `opt01-smoke.sh`·`opt02-smoke.sh`·`opt03-smoke.sh`·`rollback-check.sh`):
+    - 검색 SQL에 `escape '\'`, 다른 사용자 TODO 제외, `%`·`_` 문자 그대로.
+    - 수정 뒤 DB 해시 교체·옛 리프레시 토큰 401, 현재 비밀번호 틀림 400이 중복 409보다 먼저.
+    - 탈퇴 뒤 로그인·재발급 401·`/users/me` 404·TODO 0행·같은 username 409. 마지막 가입자(id 2)가 탈퇴한 뒤 새 가입자는 id 3, 탈퇴자 토큰은 404.
+    - OPT-03 이전 버전이 만든 `todo.db`에 새 버전 실행 → `alter table users add column withdrawn boolean default false not null`, 기존 계정 로그인·TODO 조회·탈퇴 정상.
+    - 리스너가 실패하면 탈퇴 요청 500(일반 본문)이고 `withdrawn`·리프레시 토큰·TODO 모두 롤백.
+    - 로그에 ERROR·토큰·비밀번호 0건.
+  - 정적 점검: 도메인 프레임워크 import 0, web → domain 0, application의 Spring 웹·이벤트·JPA import 0, user ↔ todo 직접 import 0/0. 필수 테스트 파일 4개 변경 0건, 테스트 도우미 삭제 줄 0.
+- 실패와 원인(끝까지 추적):
+  - ① OPT-02 첫 실행 `compileTestJava` 실패 — `ApiDocsTest`의 `Map.of`는 키·값 10쌍까지만 받는데 API가 11개가 됐다 → `Map.ofEntries`로 바꿔 해결(탈퇴 추가로 12개).
+  - ② 리뷰 반영 커밋 명령 실패 — `git mv`가 이미 스테이징한 옛 경로를 다시 `git add`해 pathspec 오류, 이어서 메시지 파일 생성 단계가 실행되지 않음 → 스테이징 확인 후 다시 커밋.
+  - ③ 실측 스크립트 표시 오류 — `grep -o '[^\r]*'`가 "백슬래시나 r이 아닌 문자"로 해석돼 `withdrawn`의 r에서 잘림. 실제 ALTER 문은 로그 원문으로 확인.
+- 독립 리뷰(`step-reviewer`): 기능·보안 결함 없음. 지적 1건(요청 DTO 이름) 반영. 참고 사항도 반영: 새 비밀번호 72바이트 테스트 추가, 탈퇴 뒤 남은 토큰으로 만든 TODO가 남는 한계를 D-21·security.md에 명시, 리뷰어가 확인하지 못한 기존 DB 열 추가·리스너 실패 롤백은 실측.
+- 다음: 10단계(TEST-X1·X3·X4, 2회 연속 실행, `./gradlew build`)
 
 ### 2026-10-26 · S14 9단계 Swagger 문서(API-10), 사용자 지시 #13(제출 ZIP 실측·선택 사항 설계·평가 기준·실격 조건 점검)
 - CI 재실행(run 40286963395, 커밋 `45ec1bb`): 6개 조합 성공, 스모크 6/6 통과, Windows 작업의 캐시 저장 경고 사라짐(Windows JDK 17 캐시 저장 성공, 빌드 로그의 `##[warning]`·`##[error]` 0건)
@@ -70,66 +96,11 @@
 - 기타: 압축 뒤 대조 — `prompt-history.jsonl`의 "claude-hub …" 프롬프트는 다른 세션(`be699439…`)의 것으로 과제와 무관해 기록 대상이 아니다. 맥이 잠들어 응답이 끊김 → 사용자 지시로 `caffeinate -ims -w <Claude Code PID>` 실행(자동 재개 훅은 없음 — `StopFailure`는 출력 무시)
 - 다음: CI 재실행 확인 → 9단계 Swagger → #13 점검·보고
 
-### 2026-10-26 · S12 협의 결과 반영(Lombok 1.18.48, memory-bank 제외), 8단계 재발급 확장(TEST-07·08·09)
-- 반영: `build.gradle`에 `ext['lombok.version'] = '1.18.48'`(build.md·D-01·D-02), `.gitignore`에 `memory-bank/`, SKILL ZIP 제외 목록에 `memory-bank/*`(D-13), persistence.md에 테이블 생성 시점·DB 위치(S11 실측) 명시
-- 실행 명령과 결과:
-  - `dependencyInsight` → `org.projectlombok:lombok:1.18.48 (selected by rule)`
-  - JDK 17 `./gradlew test` → 14건 통과. JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0
-  - JDK 27(Corretto 27.0.1, 이 수정의 일회 확인) `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0
-  - `git check-ignore -v memory-bank/activeContext.md` → `.gitignore:50`. SKILL과 같은 명령으로 만든 시험 ZIP: `build`·`.gradle`·`memory-bank`·`.idea`·`.git`·`*.db`·`*.jsonl` 없음, 필수 파일 7종 포함, `gradlew` `-rwxr-xr-x`가 ZIP 안과 `unzip` 뒤 모두 유지(R-8) — 시험 ZIP은 확인 후 삭제
-- 답이 없던 항목: Windows 실측(3번)은 현행 유지(D-18), README 안내(4번)는 12단계 계획대로
-- 8단계 구현 전 재검토(보고 후 반영): TEST-09(리프레시 토큰 만료) 추가, 테스트 도우미 분리로 필수 테스트 보호, 검증 오류 `field`를 JSON 이름으로, 해시는 SHA-256 유지(HMAC은 재시작 시 무효화), 알려진 한계 3가지 기록(D-15·D-07)
-- 8단계 구현: 도메인 `RefreshToken`, `InvalidRefreshTokenException`, `RefreshCommand`·`TokenResult`(토큰 쌍), `RefreshTokenCommandPort`·`RefreshTokenQueryPort`, `AuthService`(로그인 시 만료 행 정리·토큰 쌍 발급, 재발급의 회전·재사용 탐지 — `noRollbackFor`), `RefreshTokenJpaEntity`·`RefreshTokenRepository`·`RefreshTokenRepositoryAdapter`, `RefreshRequest`·`TokenResponse`·`POST /users/refresh`, 공개 경로 매처, 401 매핑, `auth.refresh-token-ttl: 7d`, 테스트 `TokenRefreshFlowTest`(TEST-07)·`RefreshTokenRotationTest`(TEST-08)·`RefreshTokenExpiryTest`(TEST-09)
-- 실행 명령과 결과:
-  - JDK 17 `./gradlew test` → 17건 통과(첫 실행)
-  - 변이 4종(되돌린 뒤 `cmp` 확인): ① 로그인 응답 `refresh_token` null → TEST-07·08만 실패, **TEST-01~04 통과**(테스트가 `refresh_token`에 의존하지 않음. 확장 없이 통과하는 것은 7단계 커밋 `d741470`에서 성립) ② `noRollbackFor` 제거 → TEST-08 실패(폐기 롤백 함정 검출) ③ 만료 확인 제거 → TEST-09 실패 ④ 재발급 경로를 공개 매처에서 제외 → TEST-07·08·09 실패
-  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=17 failures=0. 정적 점검(web→domain·application 프레임워크·도메인 순수성·인스턴스화 형식) 위반 0건
-  - bootRun + curl(`step8-smoke-report.txt`): `refresh_tokens(token_hash varchar(64) not null unique …)` + `idx_refresh_tokens_user_id`, 로그인 200 `{access_token, refresh_token}`(43자 Base64URL)·`Cache-Control: no-cache, no-store, max-age=0, must-revalidate`, 엉터리 Bearer + 재발급 200·새 토큰 다름, 쓴 토큰 재사용 401(`WWW-Authenticate: Bearer`)·최신 토큰 401·그 사용자 행 0개, 빈 `refresh_token` 400 `errors[0].field = refresh_token`, DB에는 16진수 64자 해시만(원문 0건), **서버 재시작 뒤 옛 액세스 토큰 401 → 재발급 200 → `/users/me` 200·TODO 생성 201**, 로그에 토큰·비밀번호·ERROR 0건
-- 사용자 질문(TTL 설정 위치): yml 값 + `@Value` 키 참조(현행) vs `@Value` 기본값 비교 — 현행 유지 권장(인증 정책을 yml 한 곳에서 확인, 키 누락·오타 시 기동 실패로 즉시 발견 — 사본에서 키 삭제 시 `Could not resolve placeholder 'auth.access-token-ttl'` 실측, Spring Boot 문서상 `@Value`는 메타데이터 없음·relaxed binding 제한, 그룹 키는 `@ConfigurationProperties` 권장이나 D-03과 충돌). 결정은 사용자 확인 대기
-- 독립 리뷰(`step-reviewer`): 코드 지적 없음 — 필수 테스트 파일 4개 diff 없음, `noRollbackFor`가 효과 있는 구조(예외를 메서드 안에서 직접 던지고 다른 트랜잭션 경계 없음), 만료 판정·정리 기준 일치, 원문 미저장·미로그, 풀 1개에서 두 번째 커넥션 요구 없음, D-20 네이밍·의존 방향 준수, `./gradlew test` 두 번 연속 17건 통과. 문서 지적 4건 반영: SEC-01 문구(이제 토큰 쌍 반환), API-02 로그인 실패 401 근거(재확인), SEC-11 7일 근거(재확인), DB-06 DDL 그대로 전사. 참고: 로그인은 같은 트랜잭션에서 리프레시 토큰도 저장하므로 저장이 실패하면 로그인도 실패한다(D-15 설계의 결과 — 세 테이블이 같은 ddl-auto로 함께 생겨 채점 환경에서 일어날 현실적 조건은 없음)
-  - 재확인(`step8-recheck.txt`): 틀린 비밀번호·없는 사용자 → 같은 401·같은 detail·`WWW-Authenticate: Bearer`, 리프레시 토큰 `expires_at` = 발급 시각 + 604,799,884~604,800,142ms(7일 = 604,800,000ms), 로그에 토큰·비밀번호 0건
-- 다음: 사용자 확인(TTL 설정 위치 결정 포함) → 9단계
-
-### 2026-10-26 · S11 테이블 생성 시점 확인, JDK 실행 범위 점검(JDK 27 실격 위험)
-- 질문: 테이블이 서버 기동 때 생기는지, README 명령을 해야 생기는지 → 기동 때 자동 생성(실행 방법과 무관), README `bootRun`이 곧 기동
-- 실행 명령과 결과(스크래치 `table-creation/report.txt`):
-  - A `todo.db` 없는 상태 `bootRun`(SQL 로그 켬) — 요청 0건. `create table todos`·`users`·`create index`가 HikariPool 시작 뒤, Tomcat 시작 전에 실행(09:09:45.99 → Tomcat 09:09:47.43), 기동 완료 시 스키마 확인
-  - B 같은 DB로 재기동 → DDL 0건, users 1행 유지, 기존 계정 로그인 200
-  - C 다른 폴더에서 `java -jar` → 그 폴더에 `todo.db`와 테이블 생성(프로젝트 루트에는 없음 — DB 위치는 실행 위치)
-  - D `./gradlew cleanTest test` 통과, 테스트 DB는 끝난 뒤 비어 있음(create-drop), `todo.db` 없음
-  - SQL 로그의 `alter table users drop constraint …`는 Hibernate 기본 전략(`DROP_RECREATE_QUIETLY`)이 시도하고 SQLite가 지원하지 않아 조용히 무시된다(6.6.53 소스). 경고·오류 없음, `unique` 유지
-- 사용자 지시 "실격 사유 절대 불허" → 실행 가능한 JDK 범위 점검. 공식 문서: Gradle 9.8.2는 JDK 17~27, Lombok 1.18.46은 ~26(27은 1.18.48), Boot 3.5.16은 공식 호환 ~25
-- 실측(스크래치 `jdk-matrix/report.txt`·`report-fix.txt`): 커밋본 `17903c7`을 `채점 환경/홍길동_springboot/assignment`(한글·공백 경로)에 새로 풀어 실행. JDK는 공식 빌드를 받아 SHA-256 확인(Temurin 25.0.5·26.0.2.1, Corretto 27.0.1 — 시스템 설치 없이 스크래치에 압축 해제)
-  - JDK 17·25·26: `clean build` 14건 통과, `bootRun` 기동 직후 테이블 3개, API(가입·로그인·TODO·401) 정상
-  - JDK 27: `compileJava` 실패 — `ClassNotFoundException: com.sun.tools.javac.tree.EndPosTable`(Lombok 1.18.46)
-  - 사본에만 `ext['lombok.version'] = '1.18.48'` 적용 → JDK 17·21·25·26·27 모두 위 항목 통과. JDK 25 이상은 sqlite-jdbc 네이티브 로드 경고 4줄(JEP 472, 향후 차단 예고)만 있음
-- 그 밖: 프로젝트 루트에 `memory-bank/`(템플릿과 파일 목록, 09:22 생성 — 이 세션이 만들지 않음)가 다시 생김 → 커밋하지 않고 협의. "statusline 은 실행 취소" 지시는 과제와 무관(used_prompts 기록 대상 아님) — 이 세션에서 실행한 statusline 작업은 없고, 전역 설정 `statusLine` 변경(09:18)도 이 세션이 한 것이 아님 → 처리 여부 협의
-- 실수: JDK 다운로드 스크립트가 체크섬 빈 행에서 경로를 잘못 만들어 실패 → 공식 SHA-256과 대조해 다시 받음
-- 다음: 협의(Lombok 1.18.48 반영, 교차 확인 JDK 범위, Windows 실측 방법, README 항목, 테이블 생성 문구, `memory-bank/`) → 합의 후 8단계
-
-### 2026-10-25 · S10 명세 재대조, 7단계 TODO 기능(TEST-02·04·X2), 계층 DTO·네이밍 정리(D-20)
-- 명세 재대조: Notion 원문을 다시 받아 로컬 사본과 비교 — 블록 76개 동일, 최종 수정 2026-09-30. 누락·오류 없음. 보강 7건: TEST-X2를 7단계로(API-09는 명세 필수 동작), TEST-04를 GET·PUT·DELETE로, SQLite ID 재사용 문서화(R-7), R-3 실측, 8단계 재사용 탐지 롤백 함정(`noRollbackFor`, D-15), ZIP `gradlew` 실행 권한·`settings.gradle` 확인(R-8, SKILL), OPT-03 판단 항목(D-14)
-- 사용자 추가 지시(작업 중): Result → Response 변환(웹 ↔ 도메인 결합 제거, SOLID), 참고 프로젝트 네이밍 → D-20. user 기능도 같은 방식으로 정리하고, CLAUDE.md를 압축할 때 빠진 초안 §5.7 "SOLID"를 원칙 6에 복원. 참고 프로젝트와 다른 점 2가지(Request/Response는 package-private 유지를 위해 `web`, JPA 엔티티는 `JpaEntity`)
-- 구현: todo 기능(도메인 `Todo`, `TodoUseCase`·`TodoService`, `CreateTodoCommand`·`UpdateTodoCommand`·`TodoResult`, `TodoCommandPort`·`TodoQueryPort`, `TodoController`·Request 2개·`TodoResponse`, `TodoJpaEntity`·`TodoRepository`·`TodoRepositoryAdapter`), `TodoNotFoundException` 404 매핑, user 기능 리팩터링(`SignupCommand`·`LoginCommand`·`UserResult`·`TokenResult`, `UserCommandPort`·`UserQueryPort`·`PasswordHashPort`·`AccessTokenPort`, `UserRepositoryAdapter`·`PasswordHashAdapter`·`AccessTokenAdapter`), 테스트 `TodoCrudFlowTest`(TEST-02)·`TodoNotFoundTest`(TEST-04)·`TodoOwnershipTest`(TEST-X2)·`IntegrationTestSupport.signupAndLogin()`
-- 실행 명령과 결과:
-  - JDK 17 `./gradlew test` → 14건 통과(첫 실행), 리팩터링 뒤 14건 통과. 정적 점검: web 어댑터의 domain import 0건, application의 웹·JPA·Security import 0건, 도메인 순수성 0건
-  - 변이 확인(되돌린 뒤 `cmp`로 원본과 일치 확인): 소유자 조건 제거 → TEST-X2만 실패(필수 4종은 통과 — X2를 앞당긴 근거), 삭제 204→200 → TEST-02 실패, Result 변환에서 제목·설명 뒤바꿈 → TEST-02·X2 실패
-  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0, `todo.db` 없음
-  - bootRun + curl(JDK 17, `todo.db` 없는 상태에서 시작): 스키마 `todos(id integer, completed boolean not null, description varchar(1000), title varchar(100) not null, user_id bigint not null, primary key (id))` + `CREATE INDEX idx_todos_user_id on todos (user_id)`, `users(username varchar(50) not null unique)`. 흐름 201 + `Location: /todos/1` → 목록 200 → 단건 200 → 수정 200 → 삭제 204(본문 0바이트) → 단건 404 ProblemDetail·목록 `[]`. 오류: 빈 제목·101자 제목·1,001자 설명·PUT `completed` 누락 → 400(`errors`), `completed` 문자열·본문 없음·깨진 JSON → 400(`errors` 없음, 프레임워크 기본 detail "Failed to read request"), `text/plain` 415·PATCH 405(둘 다 `application/problem+json`), 숫자 아닌 ID 400, 토큰 없음 401. 소유권: 타인 GET·PUT·DELETE 404, 타인 목록에 없음, 본문에 A의 `userId`를 넣은 B의 요청은 B 소유로 저장(sqlite3로 `user_id` 확인). ID 재사용 재현(A가 지운 4를 B의 새 TODO가 받음, A가 조회하면 404). 동시 요청(TODO API 기준) POST 60건·GET 60건(병렬 30) 모두 성공, 행 +60, 오류 로그 없음 → R-3 해소. `/v3/api-docs`에 `@CurrentUserId` 미노출. 로그에 토큰·비밀번호 0건
-  - 독립 리뷰(`step-reviewer`): 높음·중간 지적 없음. TODO 기능·TEST-02·04·X2·D-20 리팩터링이 명세·`api.md`·rules와 일치, D-20의 참고 프로젝트와 다른 점 2가지는 타당하다고 판단. 테스트 재실행 14건 통과. 낮음 지적 반영: ① 400 서술 정정(위 문구 — 응답 본문을 다시 받아 `step7-recheck2.txt`로 저장), ② SEC-08·D-10 상태 갱신, ③ 8단계 함정 문구 보완(예외가 다른 `@Transactional` 경계를 거치면 rollback-only로 500, `REQUIRES_NEW`는 무한 정지가 아니라 connectionTimeout 30초 뒤 실패·풀을 늘려도 SQLite 잠금으로 실패). 관찰: 가입·로그인은 bcrypt를 트랜잭션 안에서 실행해 커넥션 1개를 쥐므로 로그인이 몰리면 다른 요청이 기다린다(채점 영향 없음, D-10)
-  - 지침 로드 기록: 이번 압축 직후 `compact` 이유로 CLAUDE.md 5,753자·해시 `6a1435fe2e14` 기록 = 커밋본과 일치(D-17·DOC-08)
-- 실수·정정: 스모크 출력에서 한 줄(설명 1,001자)이 두 번 찍혔다 → 같은 요청을 단독으로 다시 보내 응답 1건(400, `description` 오류)·연결 1회를 확인
-- 다음: 사용자 확인 후 8단계
-
-### 2026-10-25 · S9 6단계 설계 재검토와 User·Auth(TEST-01)
-- 설계 재검토(구현 전 보고): 로그인은 필수 여부만 검증(bcrypt 72바이트 예외는 인코딩에서만 — 6.5.11 소스), 검증 메시지 한국어 고정(로캘 의존 제거), `PasswordEncoder` 빈 없음(어댑터 내부), 어댑터 클래스 package-private, 사용자 없는 `/users/me` 404 — D-03·D-09·rules 반영
-- 구현: `user` 기능(도메인 `User`, 포트 `UserUseCase`·`AuthUseCase`·`UserRepository`·`PasswordHasher`·`TokenIssuer`, 서비스 2개, 예외 3개, 컨트롤러 2개·요청/응답 record·`@MaxUtf8Bytes`, JPA 엔티티·리포지토리·영속성 어댑터, `DelegatingPasswordHasher`·`JwtTokenIssuer`), `@CurrentUserId`, `JwtEncoder` 빈, `auth.access-token-ttl: 1h`, 검증 오류 `errors`·기능 예외 매핑, `UserAuthFlowTest`(TEST-01)
-- 실행 명령과 결과:
-  - JDK 17 `./gradlew test` → 9건 통과(첫 실행에 통과), 도메인 순수성 grep 0건
-  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=9 failures=0, `todo.db` 없음
-  - bootRun + curl(JDK 17): 가입 201 `{id, username}`, 중복 409, 짧은 비밀번호·한글 31자(93바이트)·빈/51자 username → 400 `errors`(중복 항목 없음), 잘못된 JSON 400(프레임워크 기본 detail), 로그인 200 `{access_token}`만, 틀린 비밀번호·없는 사용자·72바이트 초과 비밀번호 → 같은 401 + `WWW-Authenticate: Bearer`, 빈 비밀번호 400, `/users/me` 200, 토큰 헤더 HS256·클레임 `exp·iat·sub`·`exp-iat=3600`, DB 저장값 `{bcrypt}$2a$10$…`(68자), `users` 스키마 `username varchar(50) not null unique`, 사용자 삭제 뒤 같은 토큰 404, 로그에 비밀번호·토큰 0건
-  - 독립 리뷰(`step-reviewer`): 지적 없음. 설계 선택 5개 모두 타당(bcrypt 경로를 바이트코드로 재확인). 문서 정합(API-03 404, 단계 문구) 반영. TEST-01만으로는 다중 사용자 분리를 증명하지 못한다는 주의 — 7단계 TEST-02·04와 10단계 TEST-X2로 확인
-- 다음: 사용자 확인 후 7단계
+### 2026-10-25~26 · S9~S12 요약 (세부는 이 파일의 git 이력)
+- S9 6단계 User·Auth(TEST-01): 가입·로그인(`access_token`만)·내 정보, bcrypt 72바이트 검증·로그인 실패 같은 401, 어댑터 package-private. JDK 17·21 9건 통과, bootRun으로 HS256·`exp-iat=3600`·`{bcrypt}` 저장값 확인
+- S10 명세 재대조(블록 76개 동일)·7단계 TODO(TEST-02·04·X2): 소유권 404 은닉, SQLite ID 재사용 재현(R-7), 동시 요청 120건(R-3 해소), 사용자 지시로 Result → Response 변환·참고 프로젝트 네이밍(D-20). 14건 통과
+- S11 테이블은 기동 때 `ddl-auto`로 생성(실행 방법과 무관) 실측, JDK 17~27 실행 범위 점검 — JDK 27에서 Lombok 1.18.46 컴파일 실패 발견(R-9)
+- S12 협의 반영(Lombok 1.18.48·`memory-bank/` 제외), 8단계 재발급 확장(TEST-07·08·09): 회전·재사용 탐지(`noRollbackFor`)·만료, 변이 4종, 서버 재시작 뒤 재발급 실측, TTL 위치 검토(yml 유지). 17건 통과
 
 ### 2026-10-25 · S1~S8 요약 (세부는 이 파일의 git 이력)
 - S1 설계 검증과 작업 체계 수립: CLAUDE.md 초안 458줄 → 72줄, rules·skill·docs 작성. Boot 4.1.2·Gradle 9.8.2 생성물, SQLite FK DDL 미생성, BCrypt 72바이트 예외, NimbusJwtEncoder 기본 RS256, ERROR 디스패치 401 함정 확인
