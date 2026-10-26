@@ -8,7 +8,7 @@
 | ID | 결정 | 상태 |
 |---|---|---|
 | D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 · Lombok 1.18.48 | 확정(S12 Lombok 보완) |
-| D-02 | Lombok·springdoc 유지와 사용 범위 | 확정 |
+| D-02 | Lombok·springdoc 유지와 사용 범위 | 확정(S14 API 문서 설정) |
 | D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정(포트 이름·Command 범위·반환 타입은 → D-20) |
 | D-04 | 도메인 모델·JPA 엔티티 분리, 집합체 간 ID 참조 | 확정 |
 | D-05 | 액세스 토큰: OAuth2 Resource Server(Nimbus) + HS256, clock skew 0 | 확정 |
@@ -52,6 +52,11 @@
 - **근거**: 채점자가 브라우저로 API를 시험할 수 있다. springdoc 2.8.17 POM은 Boot 3.5.13 기준이다. springdoc 2.8.17의 `ObjectMapperProvider`는 자체 `Json.mapper()`를 써서 Spring의 전역 Jackson 네이밍 전략을 스키마에 반영하지 않는다(소스 확인) → D-07.
 - **대안**: springdoc 제거(YAGNI 관점의 권장안이었음).
 - **보완(S12)**: Boot가 관리하는 Lombok 1.18.46이 JDK 27에서 컴파일되지 않아 Lombok 제거도 검토했으나, 사용자 결정으로 유지하고 버전만 1.18.48로 올린다(D-01).
+- **보완(S14, 9단계)**: 설정 전 문서는 제목 "OpenAPI definition", 보안 스키마 없음(Swagger UI에서 보호 API를 호출할 수 없음), `POST /todos` 200, 응답 형식 `*/*`였다.
+  - `global.config.OpenApiConfig`에 `@OpenAPIDefinition`(제목·사용 순서·오류 형식 설명, 태그 순서 사용자 → TODO)과 `@SecurityScheme`(`bearerAuth`, HTTP bearer, JWT)을 두고, 보호 API(TODO 5개·내 정보)에만 `@SecurityRequirement`를 붙였다. 스키마 이름은 상수로 참조한다 — 이름이 어긋나면 Swagger UI가 토큰을 조용히 보내지 않는다.
+  - `POST /todos`는 `ResponseEntity.created(...)`가 정하는 201을 springdoc이 알 수 없어 `@ApiResponse(responseCode = "201")`로 적는다. 오류 응답은 엔드포인트마다 적지 않고 `@Info` 설명과 README에 모은다(컨트롤러 가독성).
+  - `springdoc.api-docs.enabled`·`swagger-ui.enabled: true`를 명시한다 — springdoc 2.8.17 `SpringDocAppInitializer`는 속성이 바인딩되지 않으면(기본값 `false`인 필드, 엔드포인트는 `matchIfMissing`으로 켜짐) "enabled by default" WARN을 남긴다(소스 확인, 명시 후 WARN 0건). `default-produces-media-type: application/json`으로 실제 응답 형식을 문서화한다.
+  - 대안: 전역 보안 요구 + 공개 API에서 해제(`@SecurityRequirements`) — 새 API가 기본으로 보호 표시되지만 규칙(보호 API에만 붙인다)과 반대 방향이고 해제 표시가 3곳 필요하다. 대신 `ApiDocsTest`가 문서의 모든 API를 기대 목록과 비교해 빠진 표시를 잡는다.
 
 ### D-03 기능별 헥사고날 + 경량 DDD — 확정
 - **결정**: `user`, `todo` 패키지마다 `domain` / `application`(`port.in`, `port.out`, `service`) / `adapter`(`in.web`, `out.persistence`, `out.security`), 공통은 `global`(`security`, `error`, `config`). In Port는 책임별 인터페이스(`UserUseCase` 가입·내 정보, `AuthUseCase` 로그인·재발급, `TodoUseCase`), Out Port는 `UserRepository`·`TodoRepository`·`RefreshTokenRepository`·`PasswordHasher`·`TokenIssuer`. Command record는 파라미터가 많은 유스케이스에만 쓴다. (포트 이름·Command 범위·반환 타입은 대체됨 → D-20)

@@ -27,7 +27,7 @@ com.assignment
 ## 의존 방향 (위반 금지)
 - `domain`: 다른 계층·프레임워크에 의존하지 않는다. `org.springframework`, `jakarta.persistence`, `com.fasterxml` import 금지 (Lombok `@Getter`만 허용).
 - `application`: `domain`만 의존한다. 프레임워크는 `@Service`, `@Transactional`과 설정값을 받는 생성자 파라미터의 `@Value`(예: 리프레시 토큰 수명)만 허용하고 웹·JPA·Spring Data·Spring Security 타입은 쓰지 않는다.
-- `adapter.in.web`: `application.port.in`(호출)과 `application.dto`(Command 생성·Result 변환)만 의존한다. `domain`을 참조하지 않고, 서비스 구현체·리포지토리를 직접 호출하지 않는다 — 웹 응답이 도메인 모델에 묶이지 않게 한다(D-20).
+- `adapter.in.web`: `application.port.in`(호출)과 `application.dto`(Command 생성·Result 변환), `global`의 공통 어노테이션·상수(`@CurrentUserId`, `OpenApiConfig.BEARER_AUTH`)만 의존한다. `domain`을 참조하지 않고, 서비스 구현체·리포지토리를 직접 호출하지 않는다 — 웹 응답이 도메인 모델에 묶이지 않게 한다(D-20).
 - `adapter.out.*`: `application.port.out`을 구현하고 `domain`을 사용한다. `global`은 공통 설정만 담고 기능 로직을 두지 않는다.
 - 어댑터 패키지(`adapter.*`)의 클래스(컨트롤러·DTO·JPA 엔티티·Spring Data 리포지토리·어댑터 구현)는 package-private으로 둔다 — 포트 밖에서 참조하면 컴파일 오류가 난다. 도메인·포트·서비스·기능 예외는 public이다.
 - 기능 간(`user` ↔ `todo`) 직접 참조 금지. TODO는 소유자를 `userId`(Long)로만 참조한다(집합체 간 ID 참조).

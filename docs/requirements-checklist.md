@@ -30,7 +30,7 @@
 | API-07 | `PUT /todos/{id}` 수정 | 명세 구현 API | todo | TEST-02 | ✅ 전체 교체 200·재조회 반영, 없는 ID 404, `completed` 누락 400(TEST-02·04, S10 bootRun) |
 | API-08 | `DELETE /todos/{id}` 삭제 | 명세 구현 API | todo | TEST-02 | ✅ 204(본문 없음), 이후 단건 404·목록 미포함(TEST-02, S10) |
 | API-09 | 로그인한 사용자 본인의 TODO만 다룬다 — 타인 TODO는 404로 은닉 | 명세 구현 API·D-08 | todo service·persistence | TEST-X2(명세 필수 동작이라 7단계에서 작성 — S10) | ✅ 타인 TODO 조회·수정·삭제 404·목록 미포함·소유자 데이터 불변(TEST-X2), 본문에 다른 사용자의 `userId`를 넣어도 요청자 소유로 저장(S10 재확인, sqlite3) |
-| API-10 | API 문서(springdoc Swagger UI) — 보호 API에만 Bearer 요구 표시 | 설계·D-02 | `global/config`, 컨트롤러 | `/v3/api-docs` 확인 | ⬜ |
+| API-10 | API 문서(springdoc Swagger UI) — 보호 API에만 Bearer 요구 표시 | 설계·D-02 | `global/config`, 컨트롤러 | `/v3/api-docs` 확인 | ✅ `OpenApiConfig`(`bearerAuth` HTTP bearer)·보호 API 6개에만 `@SecurityRequirement`, `POST /todos` 201 문서화. `ApiDocsTest` 2건 — 보안 요구는 값(`[{bearerAuth: []}]`)까지 비교(보안 표시 제거·다른 스키마 이름·201 명시 제거 변이에서 각각 실패 확인). 헤드리스 Chrome Swagger UI: 자물쇠 6개, Authorize 뒤 `GET /users/me` 200·`POST /todos` 201 + `Location`, 로그인은 Bearer 헤더 없이 200(S14) |
 | API-11 | `POST /users/refresh` 리프레시 토큰으로 새 토큰 쌍 재발급 — 액세스 토큰 만료·서버 재시작 후 API 재호출 | 요청·D-15 | user(Auth) | TEST-07·08 | ✅ 200 새 토큰 쌍, 회전·재사용 401·만료·없는 토큰 401(TEST-07·08·09), 서버 재시작 뒤에도 재발급 200 → API 200(S12 bootRun) |
 
 ## 3. 인증·보안 (SEC)
@@ -74,7 +74,7 @@
 | TEST-02 | TODO 생성 → 목록 조회 → 수정 → 삭제 | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoCrudFlowTest` — 생성 201·Location → 목록 1건 → 수정 200·재조회 반영 → 삭제 204 → 단건 404·목록 0건(S10, JDK 17·21) |
 | TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ✅ `AuthenticationRequiredTest` — 보호 경로 6개(핸들러는 6·7단계) 토큰 없음·형식 오류 토큰 401, ProblemDetail·`WWW-Authenticate` 검증(S8, JDK 17·21 7건 통과) |
 | TEST-04 | 존재하지 않는 TODO ID로 요청하면 404 — `{id}`를 받는 GET·PUT·DELETE 모두(S10) | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoNotFoundTest` — `Long.MAX_VALUE` ID로 GET·PUT·DELETE 모두 404·ProblemDetail·같은 메시지(S10, JDK 17·21) |
-| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S12: 17건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2). TEST-X1·X3·X4는 10단계 |
+| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S14: 19건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2·API-10(2)), CI에서 3개 OS × JDK 17·21 통과(S13). TEST-X1·X3·X4는 10단계 |
 | TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ⬜ |
 | TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `TokenRefreshFlowTest` — 서버 키로 만든 만료 토큰 401(`invalid_token`) → 만료 토큰을 헤더에 단 재발급 200 → 새 토큰으로 `/users/me` 200·같은 id(S12, JDK 17·21) |
 | TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `RefreshTokenRotationTest` — 재발급마다 토큰 교체, 쓴 토큰 재사용 401(`WWW-Authenticate`·ProblemDetail), 이후 최신 토큰도 401(S12, JDK 17·21) |
@@ -121,7 +121,7 @@
 | R-1 | Boot 3.5.16 + Gradle 9.8.2는 공식 지원 목록 밖 | 해결: JDK 17·21에서 `clean build` 통과(S7) — 폴백 불필요 |
 | R-2 | Boot 3.5 OSS 종료 — 엔터프라이즈 전용으로만 수정된 CVE 존재(전제 기능 미사용으로 비해당) | SEC-10 유지, Tomcat은 OSS 패치 반영(TECH-08) |
 | R-3 | Hikari 풀 1개 설정의 실제 동작 미검증 | 해결(S10): 병렬 요청 120건(POST 60·GET 60, 동시 30) 모두 성공, 타임아웃·SQLITE_BUSY 없음 |
-| R-4 | springdoc 스키마와 실제 응답 표기 일치 여부 | `/v3/api-docs`에서 `access_token`·`refresh_token` 확인 |
+| R-4 | springdoc 스키마와 실제 응답 표기 일치 여부 | 해결(S14): `/v3/api-docs`의 `TokenResponse`가 `access_token`·`refresh_token`, `RefreshRequest` 필수 필드가 `refresh_token` — `ApiDocsTest`로 고정, `POST /todos` 201 문서화 |
 | R-5 | 원격 저장소가 공개 — 비밀·명세 사본이 올라가면 안 됨 | 커밋 전 `git status`·`check-ignore` 확인, 비밀은 저장소에 두지 않음(SEC-07) |
 | R-6 | 원격에 회사 도메인 이메일이 담긴 커밋 `52809a9`가 남아 있음. force push 뒤에도 GitHub는 SHA로 접근 가능한 캐시를 남길 수 있음(GitHub 문서) | 해결(S5): 저장소 재생성, 이전 커밋 조회 시 HTTP 409 |
 | R-7 | SQLite PK에 AUTOINCREMENT가 없어 삭제된 마지막 ID가 다른 사용자의 새 행에 다시 쓰인다(S10 재현) | 소유권 조건 `id + userId`로 타인 데이터 비노출(D-08) — TEST-X2로 검증, 테스트의 "없는 ID"는 `Long.MAX_VALUE` |

@@ -14,7 +14,9 @@ paths:
 - 오류 본문은 RFC 9457 ProblemDetail(`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`(검증 실패 시 `errors` 추가). 모든 401(토큰 없음·무효·만료, 로그인·재발급 실패)은 같은 형식에 `WWW-Authenticate: Bearer` 헤더를 넣는다(RFC 9110 §15.5.2 MUST).
 - 상태 코드: 검증 실패 400 · 인증 실패 401 · 리소스 없음/타인 소유 404 · username 중복 409.
 - 직접 작성하는 `detail`(인증 실패·기능 예외·검증 메시지)은 한국어로 쓴다. Spring MVC 표준 예외의 기본 `detail`(읽을 수 없는 본문·타입 불일치·없는 경로 등)은 영문 그대로 둔다(D-07). 어떤 `detail`에도 내부 정보(스택 트레이스·SQL·토큰·키)를 넣지 않는다.
-- API 문서: `/swagger-ui.html`(springdoc). `@SecurityRequirement`는 보호 API에만 붙인다(가입·로그인·재발급 제외).
+- API 문서: `/swagger-ui.html`(springdoc). 문서 정보·Bearer 보안 스키마(`bearerAuth`)·태그 순서(사용자 → TODO)는 `global.config.OpenApiConfig` 한 곳에 둔다. `@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)`는 보호 API에만 붙인다(가입·로그인·재발급 제외). 엔드포인트마다 `@Operation(summary)`를 명세의 설명 문구로 단다.
+  - `ResponseEntity`로 상태를 정하는 API(`POST /todos` 201)는 springdoc이 200으로 표시하므로 `@ApiResponse(responseCode)`로 실제 코드를 적는다. 오류 응답은 엔드포인트마다 적지 않고 문서 설명(`@Info`)과 README에 모아 둔다(컨트롤러 가독성).
+  - `ApiDocsTest`(API-10)가 문서의 모든 API를 기대 목록과 비교해 보호 API에만 `[{bearerAuth: []}]`가 붙었는지, 실제 성공 코드·토큰 필드 이름을 검증한다 — API를 추가하면 이 테스트의 목록도 함께 고친다.
 
 ## 엔드포인트
 | ID | Method · Path | 인증 | 요청 본문 | 성공 | 응답 본문 | 오류 |

@@ -17,7 +17,7 @@
 | 9 | 2026-10-25 | 7단계 전 명세 재대조, TODO 기능(TEST-02·04·X2), Result·네이밍 정리(D-20) | 반영 |
 | 10 | 2026-10-26 | 테이블 자동 생성 시점 확인, 실격 위험 점검(JDK 27 컴파일 실패 발견) | 반영 |
 | 11 | 2026-10-26 | 협의 결과 반영(Lombok 1.18.48, `memory-bank/` 제외), 8단계 설계 재검토와 리프레시 토큰 재발급(TEST-07·08·09), TTL 설정 위치 검토 | 반영 |
-| 12 | 2026-10-26 | 9단계 전 명세 전수 재대조(실격 위험 점검), Swagger 문서 | 진행 중 |
+| 12 | 2026-10-26 | 9단계 전 명세 전수 재대조(실격 위험 점검), Swagger 문서 | 반영 |
 | 13 | 2026-10-26 | 제출 ZIP 제외 항목 실측, 선택 사항(가산점) 설계, 평가 기준·실격 조건 최종 점검 | 진행 중 |
 
 ---
@@ -446,22 +446,24 @@ API Error: Your computer went to sleep mid-response. The response above may be i
 ```
   → `caffeinate -ims -w <Claude Code PID>`로 세션이 끝날 때까지 잠자기 방지(`pmset -g assertions`로 확인). API 오류로 끊긴 턴을 훅으로 자동 재개하는 방법은 없다(`StopFailure` 훅은 출력·종료 코드를 무시 — Claude Code 2.1.310 바이너리 확인).
 
-**③ AI 제안 핵심** (9단계 전 점검 — Swagger는 마친 뒤 덧붙인다)
+**③ AI 제안 핵심**
 - 명세 누락은 없고, 실격 조건 1("README 명령으로 실행되지 않음")의 새 위험 2가지를 찾았다. 하나는 흔한 환경 변수 이름 `JWT_SECRET`의 충돌이다(다른 제출물용 값이 셸에 남아 있으면 우리 형식 검사로 기동 실패). 다른 하나는 이 맥에서 실행할 수 없는 Windows·Linux 명령이다.
 - 전자는 전용 이름 `TODO_JWT_SECRET`으로 바꿨다(명시한 잘못된 값은 계속 기동 실패). 후자는 검증 방법을 사용자에게 물었고, 사용자가 GitHub Actions 실측을 골랐다.
+- Swagger(9단계): 보안 스키마(`bearerAuth`)를 두고 보호 API에만 요구를 붙여 Swagger UI에서 토큰을 넣고 바로 호출할 수 있게 했다. 문서가 200으로 잘못 표시하던 `POST /todos`는 201로 적고, springdoc의 기본 활성 경고는 명시 설정으로 없앴다(소스에서 원인 확인). 문서 계약은 테스트(API-10)로 고정했다.
 
 **④ 확인 방법**
 - 재현: `JWT_SECRET='my-jwt-secret-for-another-project'`로 `bootRun` → 기동 실패. 이름 변경 뒤 3가지 경우(옛 이름만 있음 → 기동·가입 201, 전용 이름에 잘못된 값 → 기동 실패, 올바른 값 → 기동·가입 201), 로그에 키 값 0건.
 - 인코딩: Windows 기본 인코딩(windows-1252)을 흉내 낸 JDK 17·21 빌드·한국어 응답 정상, Gradle 디버그 로그에서 javac `-encoding UTF-8` 확인.
 - CI: Windows·Linux·macOS × JDK 17·21에서 README 명령으로 테스트 → `todo.db` 없는 상태로 실행 → API 10개 호출 — 6개 조합 모두 성공(run 40277959532).
+- Swagger: `/v3/api-docs` 설정 전후 비교, 변이 3종(보안 표시 제거·다른 스키마 이름·201 명시 제거)에서 테스트 실패 확인, 헤드리스 Chrome으로 Swagger UI 실제 조작(Authorize → `/users/me` 200·`POST /todos` 201 + Location, 로그인은 토큰 헤더 없이 200), JDK 17·21 `clean build` 19건 통과, 독립 리뷰(`step-reviewer`).
 
 **⑤ 오류·개선점**
 - CI 스모크 파일의 유니코드 이스케이프가 도구 저장 과정에서 실제 한글로 바뀌어, 인코딩 흉내 실행에서 비교가 실패했다 → 이스케이프로 되돌리고 ASCII 파일임을 확인했다.
 - CI의 Windows 작업만 작업 뒤 캐시 저장이 경고로 실패했다(실행 중인 서버의 Gradle 데몬이 잠금 파일을 쥠) → 로그 보관 전에 서버를 멈추는 단계를 추가했다.
+- 리뷰 지적: 문서 첫 화면이 "로그인 응답의 refresh_token"으로 재발급하라고 안내해, 토큰 회전 때문에 두 번째 재발급부터 401과 전체 폐기로 이어질 수 있었다 → "가장 최근에 받은 refresh_token"으로 고쳤다. 테스트가 보안 요구의 존재만 보던 것을 값 비교로 강화했고, summary를 명세 문구로 맞췄다.
+- 브라우저 확장이 연결되지 않아 헤드리스 Chrome(DevTools Protocol)으로 대체했고, 검증 스크립트의 선택자 오류 2건(바깥 요소 클릭, 표 머리글 읽기)을 고쳐 다시 실행했다.
 
-**⑥ 반영** — `application.yaml`·`JwtConfig`(환경 변수 이름), `.github/workflows/ci.yml`·`.github/ci/ReadmeSmoke.java`, rules·CLAUDE.md·SKILL, 결정(D-06·D-18)·체크리스트(TECH-07, R-11·R-12)·진행 문서.
-
-(9단계 Swagger — 진행 중, 마친 뒤 이어서 기록한다)
+**⑥ 반영** — `application.yaml`·`JwtConfig`(환경 변수 이름), `.github/workflows/ci.yml`·`.github/ci/ReadmeSmoke.java`, rules·CLAUDE.md·SKILL, 결정(D-06·D-18)·체크리스트(TECH-07, R-11·R-12)·진행 문서. 9단계: `global/config/OpenApiConfig`, 컨트롤러 3개의 문서 어노테이션, `application.yaml` springdoc 설정, `ApiDocsTest`, rules(api·architecture)·D-02·체크리스트(API-10·R-4).
 
 ---
 
