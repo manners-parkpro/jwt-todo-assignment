@@ -11,6 +11,8 @@ public interface TodoUseCase {
 
 	List<TodoResult> getAll(Long userId);
 
+	List<TodoResult> search(Long userId, String keyword);
+
 	TodoResult get(Long userId, Long todoId);
 
 	TodoResult update(UpdateTodoCommand command);

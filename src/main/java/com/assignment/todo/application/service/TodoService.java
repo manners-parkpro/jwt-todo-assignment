@@ -37,6 +37,14 @@ public class TodoService implements TodoUseCase {
 
 	@Override
 	@Transactional(readOnly = true)
+	public List<TodoResult> search(Long userId, String keyword) {
+		return todoQueryPort.findAllByUserIdAndTitleContaining(userId, keyword).stream()
+				.map(TodoResult::from)
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public TodoResult get(Long userId, Long todoId) {
 		return TodoResult.from(findOwnedTodo(userId, todoId));
 	}

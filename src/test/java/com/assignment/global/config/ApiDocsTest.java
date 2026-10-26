@@ -43,6 +43,7 @@ class ApiDocsTest extends IntegrationTestSupport {
 				"GET /users/me", true,
 				"POST /todos", true,
 				"GET /todos", true,
+				"GET /todos/search", true,
 				"GET /todos/{id}", true,
 				"PUT /todos/{id}", true,
 				"DELETE /todos/{id}", true));

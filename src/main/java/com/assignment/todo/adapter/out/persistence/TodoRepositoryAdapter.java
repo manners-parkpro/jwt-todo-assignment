@@ -35,4 +35,11 @@ class TodoRepositoryAdapter implements TodoCommandPort, TodoQueryPort {
 				.map(TodoJpaEntity::toDomain)
 				.toList();
 	}
+
+	@Override
+	public List<Todo> findAllByUserIdAndTitleContaining(Long userId, String keyword) {
+		return todoRepository.findAllByUserIdAndTitleContainingIgnoreCaseOrderByIdAsc(userId, keyword).stream()
+				.map(TodoJpaEntity::toDomain)
+				.toList();
+	}
 }

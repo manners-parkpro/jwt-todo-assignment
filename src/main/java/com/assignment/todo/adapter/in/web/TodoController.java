@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -46,6 +47,14 @@ class TodoController {
 	@Operation(summary = "내 목록 조회", description = "id 오름차순으로 돌려준다")
 	List<TodoResponse> getAll(@CurrentUserId Long userId) {
 		return todoUseCase.getAll(userId).stream()
+				.map(TodoResponse::from)
+				.toList();
+	}
+
+	@GetMapping("/search")
+	@Operation(summary = "제목으로 검색", description = "내 TODO 중 제목에 검색어가 들어간 것을 id 오름차순으로 돌려준다. 영문 대소문자를 구분하지 않고, %와 _는 문자 그대로 찾는다")
+	List<TodoResponse> search(@CurrentUserId Long userId, @Valid @ParameterObject TodoSearchRequest request) {
+		return todoUseCase.search(userId, request.keyword()).stream()
 				.map(TodoResponse::from)
 				.toList();
 	}
