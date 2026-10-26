@@ -3,7 +3,8 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-26
-- **단계: 7단계(Todo) 완료 → 8단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- **단계: 7단계(Todo) 완료 → 사용자 협의 대기(S11 — JDK 27 실격 위험 수정안, 테이블 생성 문구, `memory-bank/` 처리) → 8단계.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- **알려진 실격 위험(S11)**: JDK 27에서 `compileJava` 실패(Lombok 1.18.46). 수정안(Lombok 1.18.48)은 사본에서 JDK 17·21·25·26·27 통과 — 협의 후 반영.
 - 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(14건 — contextLoads·TEST-01·02·03(7)·04(3)·X2, S10). `bootRun`에서 TODO 흐름·오류·소유권·동시 요청 확인(S10).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
@@ -31,6 +32,23 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-26 · S11 테이블 생성 시점 확인, JDK 실행 범위 점검(JDK 27 실격 위험)
+- 질문: 테이블이 서버 기동 때 생기는지, README 명령을 해야 생기는지 → 기동 때 자동 생성(실행 방법과 무관), README `bootRun`이 곧 기동
+- 실행 명령과 결과(스크래치 `table-creation/report.txt`):
+  - A `todo.db` 없는 상태 `bootRun`(SQL 로그 켬) — 요청 0건. `create table todos`·`users`·`create index`가 HikariPool 시작 뒤, Tomcat 시작 전에 실행(09:09:45.99 → Tomcat 09:09:47.43), 기동 완료 시 스키마 확인
+  - B 같은 DB로 재기동 → DDL 0건, users 1행 유지, 기존 계정 로그인 200
+  - C 다른 폴더에서 `java -jar` → 그 폴더에 `todo.db`와 테이블 생성(프로젝트 루트에는 없음 — DB 위치는 실행 위치)
+  - D `./gradlew cleanTest test` 통과, 테스트 DB는 끝난 뒤 비어 있음(create-drop), `todo.db` 없음
+  - SQL 로그의 `alter table users drop constraint …`는 Hibernate 기본 전략(`DROP_RECREATE_QUIETLY`)이 시도하고 SQLite가 지원하지 않아 조용히 무시된다(6.6.53 소스). 경고·오류 없음, `unique` 유지
+- 사용자 지시 "실격 사유 절대 불허" → 실행 가능한 JDK 범위 점검. 공식 문서: Gradle 9.8.2는 JDK 17~27, Lombok 1.18.46은 ~26(27은 1.18.48), Boot 3.5.16은 공식 호환 ~25
+- 실측(스크래치 `jdk-matrix/report.txt`·`report-fix.txt`): 커밋본 `17903c7`을 `채점 환경/홍길동_springboot/assignment`(한글·공백 경로)에 새로 풀어 실행. JDK는 공식 빌드를 받아 SHA-256 확인(Temurin 25.0.5·26.0.2.1, Corretto 27.0.1 — 시스템 설치 없이 스크래치에 압축 해제)
+  - JDK 17·25·26: `clean build` 14건 통과, `bootRun` 기동 직후 테이블 3개, API(가입·로그인·TODO·401) 정상
+  - JDK 27: `compileJava` 실패 — `ClassNotFoundException: com.sun.tools.javac.tree.EndPosTable`(Lombok 1.18.46)
+  - 사본에만 `ext['lombok.version'] = '1.18.48'` 적용 → JDK 17·21·25·26·27 모두 위 항목 통과. JDK 25 이상은 sqlite-jdbc 네이티브 로드 경고 4줄(JEP 472, 향후 차단 예고)만 있음
+- 그 밖: 프로젝트 루트에 `memory-bank/`(템플릿과 파일 목록, 09:22 생성 — 이 세션이 만들지 않음)가 다시 생김 → 커밋하지 않고 협의. "statusline 은 실행 취소" 지시는 과제와 무관(used_prompts 기록 대상 아님) — 이 세션에서 실행한 statusline 작업은 없고, 전역 설정 `statusLine` 변경(09:18)도 이 세션이 한 것이 아님 → 처리 여부 협의
+- 실수: JDK 다운로드 스크립트가 체크섬 빈 행에서 경로를 잘못 만들어 실패 → 공식 SHA-256과 대조해 다시 받음
+- 다음: 협의(Lombok 1.18.48 반영, 교차 확인 JDK 범위, Windows 실측 방법, README 항목, 테이블 생성 문구, `memory-bank/`) → 합의 후 8단계
 
 ### 2026-10-25 · S10 명세 재대조, 7단계 TODO 기능(TEST-02·04·X2), 계층 DTO·네이밍 정리(D-20)
 - 명세 재대조: Notion 원문을 다시 받아 로컬 사본과 비교 — 블록 76개 동일, 최종 수정 2026-09-30. 누락·오류 없음. 보강 7건: TEST-X2를 7단계로(API-09는 명세 필수 동작), TEST-04를 GET·PUT·DELETE로, SQLite ID 재사용 문서화(R-7), R-3 실측, 8단계 재사용 탐지 롤백 함정(`noRollbackFor`, D-15), ZIP `gradlew` 실행 권한·`settings.gradle` 확인(R-8, SKILL), OPT-03 판단 항목(D-14)

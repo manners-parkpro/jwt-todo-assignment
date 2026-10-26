@@ -7,7 +7,7 @@
 
 | ID | 결정 | 상태 |
 |---|---|---|
-| D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 | 확정 |
+| D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 | 확정(S11: JDK 27 대응 협의 중) |
 | D-02 | Lombok·springdoc 유지와 사용 범위 | 확정 |
 | D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정(포트 이름·Command 범위·반환 타입은 → D-20) |
 | D-04 | 도메인 모델·JPA 엔티티 분리, 집합체 간 ID 참조 | 확정 |
@@ -40,6 +40,10 @@
 - **대안**: Boot 3.5.16 + Gradle 8.14.6(공식 조합, JDK 25 이상에서 실행 불가) · Boot 4.1.2(지속 패치, JUnit 6이라 명세와 불일치) · Java 21 toolchain(채점 환경에 JDK 21 필요).
 - **실측 계획**: JDK 17·21로 `./gradlew clean test/build --warning-mode all`, class major 61, `dependencyInsight tomcat-embed-core`. 실패하면 8.14.6으로 폴백하고 README에 "JDK 17~24"를 명시한다.
 - **실측 결과(3단계, 2026-10-25)**: Gradle 9.8.2 + Boot 3.5.16으로 JDK 21·17 모두 `clean compileJava compileTestJava assemble`(bootJar 포함) 성공, class major 61. 해석된 버전 — spring-boot 3.5.16, spring-core 6.2.19, spring-security-oauth2-jose 6.5.11, hibernate-core·community-dialects 6.6.53.Final, sqlite-jdbc 3.49.1.0, tomcat-embed-core 10.1.61(rule로 선택), springdoc 2.8.17, junit-jupiter 5.12.2. Boot 플러그인(`JavaPluginAction`)이 `Configuration.setVisible`을 써서 deprecation 경고 1건(Gradle 11 제거 예정 — 9.x 영향 없음). 4단계에서 JDK 17·21 모두 `clean test` 통과, 실행 중 Tomcat 10.1.61 확인 → 실측 조건 해소(8.14.6 폴백 불필요).
+- **실측(S11)**: 명세 "Java 17 이상"에는 상한이 없어 공개된 최신 JDK까지 확인했다.
+  - 공식 범위: Gradle 9.8.2는 JDK 17~27에서 실행(28 미지원), Boot 3.5.16은 공식 호환 ~25, Boot가 관리하는 Lombok 1.18.46은 ~26.
+  - 커밋본을 새 경로에 풀어 실행: JDK 17·25·26 통과, **JDK 27은 Lombok 때문에 `compileJava` 실패**(javac 내부 클래스 `EndPosTable` 제거).
+  - 사본에서 Lombok 1.18.48(JDK 27 지원)로 올리면 17·21·25·26·27 모두 빌드·테스트·`bootRun`이 통과했다. 반영 여부는 사용자 협의 후 결정한다.
 - **검증 정책(사용자 결정 2026-10-25)**: 기본 개발·검증은 JDK 17(타깃·명세 최소 버전), 단계 완료와 제출 전에 JDK 21로 한 번 교차 확인한다. 21 확인의 목적은 코드가 아니라 빌드 환경이다 — toolchain이 없으므로 채점자의 JDK에서 Gradle·javac·Lombok 애너테이션 프로세서·테스트 라이브러리가 실행되며, 대상이 17이어도 새 JDK에서 빌드가 깨질 수 있다(예: Lombok 1.18.28 이하는 JDK 21 javac에서 컴파일 실패, Gradle 8.14는 JDK 25에서 실행 불가).
 
 ### D-02 Lombok·springdoc 유지 — 확정

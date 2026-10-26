@@ -9,12 +9,12 @@
 ## 1. 기술·실행 (TECH)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ✅ JDK 17·21에서 `clean build` 통과(S7), class 61(S4) |
+| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ❌ JDK 27(2026-09 GA)에서 `compileJava` 실패 — Lombok 1.18.46이 JDK 27 미지원(S11 실측). JDK 17·21·25·26은 통과. 수정안(Lombok 1.18.48)은 사본에서 17·21·25·26·27 모두 통과 — 협의 후 반영(R-9) |
 | TECH-02 | Spring Boot 3.5.16 | 초안·D-01 | `build.gradle` | `./gradlew dependencies` | ✅ spring-boot 3.5.16 해석 확인(S4) |
 | TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | ✅ Gradle 9.8.2 + Boot 3.5.16, JDK 17·21에서 `clean build` 통과(S7). deprecation 경고 1건(Gradle 11 제거 예정) |
 | TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | ✅ SQLite에서 생성·조회·수정·삭제 동작(TEST-02, S10 bootRun) |
 | TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | ✅ JUnit 5.12.2로 테스트 실행(S6) |
-| TECH-06 | 테이블은 README 명령만으로 생성 — 생성 경로는 `ddl-auto` 하나(수동 SQL·`schema.sql`·DB 파일 제공 금지), README에 SQL 명령 없음 | 명세 기술 조건·요청·D-10 | `application.yaml` | `todo.db`를 지운 클린 상태에서 README 명령만 실행 후 `.schema` | ⬜ |
+| TECH-06 | 테이블은 README 명령만으로 생성 — 생성 경로는 `ddl-auto` 하나(수동 SQL·`schema.sql`·DB 파일 제공 금지), README에 SQL 명령 없음 | 명세 기술 조건·요청·D-10 | `application.yaml` | `todo.db`를 지운 클린 상태에서 README 명령만 실행 후 `.schema` | 🟨 `todo.db` 없는 상태에서 `bootRun`만으로 기동 중(요청 전) 테이블·인덱스 생성, 재기동 DDL 0건·데이터 유지, `./gradlew test`는 별도 테스트 DB(S11). README 작성 후 README 명령으로 최종 확인(12단계) |
 | TECH-07 | **⚠ 실격** README에 적힌 명령어로 실행·테스트 가능 | 명세 실격 조건 | `README.md` | README 순서대로 클린 실행 | ⬜ |
 | TECH-08 | 내장 Tomcat 보안 패치 버전(10.1.61) 오버라이드 | 설계·D-01 | `build.gradle` | `dependencyInsight` | ✅ 10.1.55 → 10.1.61 selected by rule(S4) |
 
@@ -125,5 +125,7 @@
 | R-6 | 원격에 회사 도메인 이메일이 담긴 커밋 `52809a9`가 남아 있음. force push 뒤에도 GitHub는 SHA로 접근 가능한 캐시를 남길 수 있음(GitHub 문서) | 해결(S5): 저장소 재생성, 이전 커밋 조회 시 HTTP 409 |
 | R-7 | SQLite PK에 AUTOINCREMENT가 없어 삭제된 마지막 ID가 다른 사용자의 새 행에 다시 쓰인다(S10 재현) | 소유권 조건 `id + userId`로 타인 데이터 비노출(D-08) — TEST-X2로 검증, 테스트의 "없는 ID"는 `Long.MAX_VALUE` |
 | R-8 | 압축 해제 도구에 따라 ZIP 안 `gradlew`의 실행 권한이 빠지면 README의 `./gradlew`가 실패(실격 조건 1) | `zipinfo`로 권한 확인(submission-check), README에 `chmod +x gradlew` 안내(12단계 실측) |
+| R-9 | 명세 "Java 17 이상"에 상한이 없는데 JDK 27에서 `compileJava`가 실패한다(Boot가 관리하는 Lombok 1.18.46이 JDK 27 미지원, S11 실측) → README 명령 실패(실격 조건 1) | 수정안 `ext['lombok.version'] = '1.18.48'` — 사본에서 JDK 17·21·25·26·27 빌드·테스트·`bootRun` 통과. 사용자 협의 후 반영 |
+| R-10 | 도구가 프로젝트 루트에 `memory-bank/`(템플릿·파일 목록)를 다시 만들었다(S11, 09:22) — 커밋·ZIP에 섞일 수 있다 | 커밋은 경로를 지정해 제외 중. 삭제 또는 `.gitignore`·ZIP 제외를 사용자와 협의 |
 
 해결됨(2026-10-25): 원문 명세 확보·대조, Lombok·springdoc 유지 결정, `memory-bank/` 삭제, Git 저장소 초기화와 원격 연결.
