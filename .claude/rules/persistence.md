@@ -36,7 +36,7 @@ paths:
 ## JPA 엔티티·리포지토리
 - `adapter.out.persistence` 안에만 둔다. `protected` 기본 생성자, setter 없음, `from(domain)`/`toDomain()` 변환 메서드.
 - 이름(D-20): 엔티티 `<대상>JpaEntity`, Spring Data 인터페이스 `<대상>Repository`, 이를 주입해 `<대상>CommandPort`·`<대상>QueryPort`를 함께 구현하는 `<대상>RepositoryAdapter`.
-- 조회 메서드에는 소유자 조건을 넣는다: `findByIdAndUserId`, `findAllByUserIdOrderByIdAsc`. 사용자 ID 필드는 두 테이블 모두 `userId`(컬럼 `user_id`)로 쓰며, Boot 기본 명명 전략이 바꿔 주므로 `@Column(name)`을 붙이지 않는다. 사용자는 `findByUsername`, `existsByUsername`. 리프레시 토큰은 `findByTokenHash`, `deleteAllByUserId`, `deleteAllByUserIdAndExpiresAtLessThan`.
+- 조회 메서드에는 소유자 조건을 넣는다: `findByIdAndUserId`, `findAllByUserIdOrderByIdAsc`. 사용자 ID 필드는 두 테이블 모두 `userId`(컬럼 `user_id`)로 쓰며, Boot 기본 명명 전략이 바꿔 주므로 `@Column(name)`을 붙이지 않는다. 사용자는 `findByUsername`, `existsByUsername`. 리프레시 토큰은 `findByTokenHash`, `deleteAllByUserId`, `deleteAllByUserIdAndExpiresAtLessThanEqual`(만료 기준 "현재 ≥ 만료 시각"과 맞춘다).
 - 네이티브 쿼리(`@NativeQuery`, `nativeQuery = true`)와 요청값으로 만든 `Sort`·`Pageable`은 쓰지 않는다. 정렬은 메서드 이름에 고정한다(CVE-2026-47834 전제 회피).
 
 ## 검증

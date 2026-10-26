@@ -7,12 +7,12 @@ paths:
 
 ## 우선순위
 1. 필수 4종 TEST-01~04(단계는 `docs/requirements-checklist.md`)를 먼저 완성하고 통과시킨다.
-2. 사용자 요청 확장(재발급) 테스트 TEST-07·08은 재발급 기능 구현 단계에서 함께 작성한다.
+2. 사용자 요청 확장(재발급) 테스트 TEST-07·08·09는 재발급 기능 구현 단계에서 함께 작성한다. TEST-09(만료·없는 리프레시 토큰)는 `@TestPropertySource`로 수명을 0초로 둔 별도 컨텍스트라, create-drop이 다른 컨텍스트의 테이블을 지우지 않도록 DB 파일(`build/todo-test-refresh-expiry.db`)도 따로 쓴다.
 3. 그다음 선택 테스트 TEST-X1~X4(위조·만료 토큰 401, 타인 TODO 404, 중복 가입 409, 입력 검증 400). 커버리지만을 위한 테스트는 만들지 않는다.
    - 예외: TEST-X2는 명세의 필수 동작("로그인한 사용자 본인의 TODO만", API-09)을 검증하므로 TODO 기능 단계(7단계)에서 TEST-02·04 다음에 작성한다.
 
 ## 필수 테스트 보호 (D-15)
-- TEST-01~04는 확장 기능(Refresh Token, 선택 사항)과 독립적으로 작성한다. TEST-01은 로그인 응답에서 `access_token`만 읽고 `refresh_token`이 있다고 가정하지 않는다.
+- TEST-01~04는 확장 기능(Refresh Token, 선택 사항)과 독립적으로 작성한다. TEST-01은 로그인 응답에서 `access_token`만 읽고 `refresh_token`이 있다고 가정하지 않는다. 준비용 도우미도 `signupAndLogin()`(access_token만)과 `signupAndLoginWithRefreshToken()`(확장 테스트 전용)으로 나눈다 — 로그인 응답의 `refresh_token`을 null로 바꾼 변이에서 TEST-01~04가 통과함을 확인했다(S12).
 - 확장 기능을 구현한 뒤에는 TEST-01~04를 다시 실행해 회귀가 없는지 확인한다. 확장 때문에 필수 테스트를 수정·약화·생략하지 않는다.
 
 ## 구성

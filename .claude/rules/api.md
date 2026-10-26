@@ -20,7 +20,7 @@ paths:
 | ID | Method · Path | 인증 | 요청 본문 | 성공 | 응답 본문 | 오류 |
 |---|---|---|---|---|---|---|
 | API-01 | `POST /users/signup` | ✗ | `username`, `password` | 201 | `{id, username}` | 400, 409 |
-| API-02 | `POST /users/login` | ✗ | `username`, `password` | 200 | `{access_token}` → 8단계부터 `{access_token, refresh_token}` | 400, 401 |
+| API-02 | `POST /users/login` | ✗ | `username`, `password` | 200 | `{access_token, refresh_token}` — `access_token`은 명세 필드, `refresh_token`은 확장(8단계) | 400, 401 |
 | API-03 | `GET /users/me` | ✓ | – | 200 | `{id, username}` | 401, 404(사용자 없음) |
 | API-11 | `POST /users/refresh` | ✗ | `refresh_token` | 200 | `{access_token, refresh_token}` | 400, 401 |
 | API-04 | `POST /todos` | ✓ | `title`, `description`(선택) | 201 + `Location: /todos/{id}` | Todo | 400, 401 |
@@ -31,7 +31,8 @@ paths:
 
 - Todo = `{id, title, description, completed}`. 생성 시 `completed`는 `false`. 비밀번호(해시)·소유자 정보·토큰 해시는 어떤 응답에도 넣지 않는다.
 - 입력 검증: 가입 `username` 필수·50자 이하, `password` 8~64자·UTF-8 72바이트 이하 / 로그인 `username`·`password` 필수(가입 규칙은 검사하지 않는다 — 틀리면 401) / `refresh_token` 필수 / `title` 필수·공백 불가·100자 이하 / `description` 1,000자 이하 / `completed`는 PUT에서 필수.
-- 검증 메시지는 어노테이션에 고정한 한국어로 쓴다 — 기본 메시지는 요청 `Accept-Language`·JVM 로캘에 따라 바뀐다. 실패 응답은 `errors: [{field, message}]`.
+- 검증 메시지는 어노테이션에 고정한 한국어로 쓴다 — 기본 메시지는 요청 `Accept-Language`·JVM 로캘에 따라 바뀐다. 실패 응답은 `errors: [{field, message}]`이고, `field`는 클라이언트가 보낸 JSON 이름이다(`refresh_token` — 자바 이름 `refreshToken`을 `GlobalExceptionHandler`가 Jackson 정보로 바꾼다).
+- 재발급 실패(없는 토큰·만료·이미 쓴 토큰)는 모두 같은 401과 detail("리프레시 토큰이 유효하지 않습니다.")이다. 토큰 응답에는 Spring Security 기본 헤더(`Cache-Control: no-cache, no-store, max-age=0, must-revalidate`)가 붙는다(S12 실측).
 - `GET /users/me`에서 토큰은 유효하지만 사용자가 없으면 404다.
 - 경로의 `{id}`가 숫자가 아니면 400.
 

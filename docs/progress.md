@@ -3,7 +3,9 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-26
-- **단계: 7단계(Todo) 완료, 협의 결과 반영(S12) → 8단계 진행 중.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- **단계: 8단계(재발급 확장) 완료 → 9단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 빌드·테스트(S12): JDK 17·21 `clean build` 통과(17건 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2). TEST-01~04 회귀 없음, 로그인 응답의 `refresh_token`을 null로 바꾼 변이에서도 TEST-01~04 통과.
+- 사용자 확인 대기: TTL 설정 위치(yml 유지 권장 vs `@Value` 기본값) — 검증 결과 보고함(S12 로그).
 - 협의 결과(S12, 사용자 결정): Lombok 1.18.48로 JDK 27 실격 위험 해결, 정기 교차 확인 JDK는 17·21 유지, `memory-bank/`는 로컬에 두고 Git·ZIP에서만 제외. Windows 실측(GitHub Actions)은 채택하지 않음(D-18 유지), README 안내 항목은 12단계에서 실측 후 반영.
 - 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(14건 — contextLoads·TEST-01·02·03(7)·04(3)·X2, S10). `bootRun`에서 TODO 흐름·오류·소유권·동시 요청 확인(S10).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
@@ -18,7 +20,7 @@
 5. [x] 보안 골격: `auth.jwt-secret`·SecurityConfig·서명 키와 JWT 디코더(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01 (검증: S8)
 6. [x] User·Auth 필수 범위: `JwtEncoder`(HS256 헤더 명시)·`TokenIssuer`·비밀번호 해시 어댑터·`@CurrentUserId`, 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06 (검증: S9)
 7. [x] Todo 기능 → TEST-02·04(GET·PUT·DELETE) + TEST-X2(본인 TODO만 — 명세 필수 동작이라 S10에 10단계에서 앞당김), 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인, 동시 요청으로 커넥션 풀 1개 동작 확인(R-3) — API-04~09, ERR-02·03, DB-02·03. 사용자 지시로 Result → Response 변환·네이밍 정리(D-20)를 user 기능까지 적용 (검증: S10)
-8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06
+8. [x] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + TEST-09(만료, S12 추가) + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06 (검증: S12)
 9. [ ] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10
 10. [ ] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
 11. [ ] 선택 기능 OPT-01~03 결정(구현하면 테스트 포함) — D-14
@@ -33,7 +35,7 @@
 
 ## 세션 로그 (최신이 위)
 
-### 2026-10-26 · S12 협의 결과 반영(Lombok 1.18.48, memory-bank 제외)
+### 2026-10-26 · S12 협의 결과 반영(Lombok 1.18.48, memory-bank 제외), 8단계 재발급 확장(TEST-07·08·09)
 - 반영: `build.gradle`에 `ext['lombok.version'] = '1.18.48'`(build.md·D-01·D-02), `.gitignore`에 `memory-bank/`, SKILL ZIP 제외 목록에 `memory-bank/*`(D-13), persistence.md에 테이블 생성 시점·DB 위치(S11 실측) 명시
 - 실행 명령과 결과:
   - `dependencyInsight` → `org.projectlombok:lombok:1.18.48 (selected by rule)`
@@ -41,7 +43,17 @@
   - JDK 27(Corretto 27.0.1, 이 수정의 일회 확인) `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0
   - `git check-ignore -v memory-bank/activeContext.md` → `.gitignore:50`. SKILL과 같은 명령으로 만든 시험 ZIP: `build`·`.gradle`·`memory-bank`·`.idea`·`.git`·`*.db`·`*.jsonl` 없음, 필수 파일 7종 포함, `gradlew` `-rwxr-xr-x`가 ZIP 안과 `unzip` 뒤 모두 유지(R-8) — 시험 ZIP은 확인 후 삭제
 - 답이 없던 항목: Windows 실측(3번)은 현행 유지(D-18), README 안내(4번)는 12단계 계획대로
-- 다음: 8단계 설계 재검토 → 구현
+- 8단계 구현 전 재검토(보고 후 반영): TEST-09(리프레시 토큰 만료) 추가, 테스트 도우미 분리로 필수 테스트 보호, 검증 오류 `field`를 JSON 이름으로, 해시는 SHA-256 유지(HMAC은 재시작 시 무효화), 알려진 한계 3가지 기록(D-15·D-07)
+- 8단계 구현: 도메인 `RefreshToken`, `InvalidRefreshTokenException`, `RefreshCommand`·`TokenResult`(토큰 쌍), `RefreshTokenCommandPort`·`RefreshTokenQueryPort`, `AuthService`(로그인 시 만료 행 정리·토큰 쌍 발급, 재발급의 회전·재사용 탐지 — `noRollbackFor`), `RefreshTokenJpaEntity`·`RefreshTokenRepository`·`RefreshTokenRepositoryAdapter`, `RefreshRequest`·`TokenResponse`·`POST /users/refresh`, 공개 경로 매처, 401 매핑, `auth.refresh-token-ttl: 7d`, 테스트 `TokenRefreshFlowTest`(TEST-07)·`RefreshTokenRotationTest`(TEST-08)·`RefreshTokenExpiryTest`(TEST-09)
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew test` → 17건 통과(첫 실행)
+  - 변이 4종(되돌린 뒤 `cmp` 확인): ① 로그인 응답 `refresh_token` null → TEST-07·08만 실패, **TEST-01~04 통과**(테스트가 `refresh_token`에 의존하지 않음. 확장 없이 통과하는 것은 7단계 커밋 `d741470`에서 성립) ② `noRollbackFor` 제거 → TEST-08 실패(폐기 롤백 함정 검출) ③ 만료 확인 제거 → TEST-09 실패 ④ 재발급 경로를 공개 매처에서 제외 → TEST-07·08·09 실패
+  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=17 failures=0. 정적 점검(web→domain·application 프레임워크·도메인 순수성·인스턴스화 형식) 위반 0건
+  - bootRun + curl(`step8-smoke-report.txt`): `refresh_tokens(token_hash varchar(64) not null unique …)` + `idx_refresh_tokens_user_id`, 로그인 200 `{access_token, refresh_token}`(43자 Base64URL)·`Cache-Control: no-cache, no-store, max-age=0, must-revalidate`, 엉터리 Bearer + 재발급 200·새 토큰 다름, 쓴 토큰 재사용 401(`WWW-Authenticate: Bearer`)·최신 토큰 401·그 사용자 행 0개, 빈 `refresh_token` 400 `errors[0].field = refresh_token`, DB에는 16진수 64자 해시만(원문 0건), **서버 재시작 뒤 옛 액세스 토큰 401 → 재발급 200 → `/users/me` 200·TODO 생성 201**, 로그에 토큰·비밀번호·ERROR 0건
+- 사용자 질문(TTL 설정 위치): yml 값 + `@Value` 키 참조(현행) vs `@Value` 기본값 비교 — 현행 유지 권장(인증 정책을 yml 한 곳에서 확인, 키 누락·오타 시 기동 실패로 즉시 발견 — 사본에서 키 삭제 시 `Could not resolve placeholder 'auth.access-token-ttl'` 실측, Spring Boot 문서상 `@Value`는 메타데이터 없음·relaxed binding 제한, 그룹 키는 `@ConfigurationProperties` 권장이나 D-03과 충돌). 결정은 사용자 확인 대기
+- 독립 리뷰(`step-reviewer`): 코드 지적 없음 — 필수 테스트 파일 4개 diff 없음, `noRollbackFor`가 효과 있는 구조(예외를 메서드 안에서 직접 던지고 다른 트랜잭션 경계 없음), 만료 판정·정리 기준 일치, 원문 미저장·미로그, 풀 1개에서 두 번째 커넥션 요구 없음, D-20 네이밍·의존 방향 준수, `./gradlew test` 두 번 연속 17건 통과. 문서 지적 4건 반영: SEC-01 문구(이제 토큰 쌍 반환), API-02 로그인 실패 401 근거(재확인), SEC-11 7일 근거(재확인), DB-06 DDL 그대로 전사. 참고: 로그인은 같은 트랜잭션에서 리프레시 토큰도 저장하므로 저장이 실패하면 로그인도 실패한다(D-15 설계의 결과 — 세 테이블이 같은 ddl-auto로 함께 생겨 채점 환경에서 일어날 현실적 조건은 없음)
+  - 재확인(`step8-recheck.txt`): 틀린 비밀번호·없는 사용자 → 같은 401·같은 detail·`WWW-Authenticate: Bearer`, 리프레시 토큰 `expires_at` = 발급 시각 + 604,799,884~604,800,142ms(7일 = 604,800,000ms), 로그에 토큰·비밀번호 0건
+- 다음: 사용자 확인(TTL 설정 위치 결정 포함) → 9단계
 
 ### 2026-10-26 · S11 테이블 생성 시점 확인, JDK 실행 범위 점검(JDK 27 실격 위험)
 - 질문: 테이블이 서버 기동 때 생기는지, README 명령을 해야 생기는지 → 기동 때 자동 생성(실행 방법과 무관), README `bootRun`이 곧 기동

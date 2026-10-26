@@ -22,7 +22,7 @@
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
 | API-01 | `POST /users/signup` 회원가입 | 명세 구현 API | user | TEST-01 | ✅ 201 `{id, username}`(TEST-01, S9). 중복 409·검증 400 실측(S9 bootRun) |
-| API-02 | `POST /users/login` 로그인, `access_token` 반환(+ 확장 필드 `refresh_token`) | 명세 구현 API·요청·D-15 | user(Auth) | TEST-01 | 🟨 필수 범위 완료 — 200 `{access_token}`, 실패 401(TEST-01·S9 bootRun). 확장 필드 `refresh_token`은 8단계 |
+| API-02 | `POST /users/login` 로그인, `access_token` 반환(+ 확장 필드 `refresh_token`) | 명세 구현 API·요청·D-15 | user(Auth) | TEST-01 | ✅ 200 `{access_token, refresh_token}`(TEST-01·07, S12 bootRun), 틀린 비밀번호·없는 사용자 → 같은 401 + `WWW-Authenticate: Bearer`(S12 재확인 — 401 핸들러 통합 후). 테스트는 `refresh_token`에 의존하지 않음(S12 변이: refresh_token null에서 TEST-01~04 통과) |
 | API-03 | `GET /users/me` 내 정보 조회 (인증) | 명세 구현 API | user | TEST-01 | ✅ 토큰으로 200 `{id, username}`(TEST-01, S9), 삭제된 사용자 404(S9 bootRun) |
 | API-04 | `POST /todos` 생성 (인증) | 명세 구현 API | todo | TEST-02 | ✅ 201 + `Location: /todos/{id}`, `completed=false`(TEST-02, S10 bootRun) |
 | API-05 | `GET /todos` 내 목록 조회 | 명세 구현 API | todo | TEST-02 | ✅ 본인 것만 id 오름차순(TEST-02·X2, S10 bootRun 62건 정렬 확인) |
@@ -31,12 +31,12 @@
 | API-08 | `DELETE /todos/{id}` 삭제 | 명세 구현 API | todo | TEST-02 | ✅ 204(본문 없음), 이후 단건 404·목록 미포함(TEST-02, S10) |
 | API-09 | 로그인한 사용자 본인의 TODO만 다룬다 — 타인 TODO는 404로 은닉 | 명세 구현 API·D-08 | todo service·persistence | TEST-X2(명세 필수 동작이라 7단계에서 작성 — S10) | ✅ 타인 TODO 조회·수정·삭제 404·목록 미포함·소유자 데이터 불변(TEST-X2), 본문에 다른 사용자의 `userId`를 넣어도 요청자 소유로 저장(S10 재확인, sqlite3) |
 | API-10 | API 문서(springdoc Swagger UI) — 보호 API에만 Bearer 요구 표시 | 설계·D-02 | `global/config`, 컨트롤러 | `/v3/api-docs` 확인 | ⬜ |
-| API-11 | `POST /users/refresh` 리프레시 토큰으로 새 토큰 쌍 재발급 — 액세스 토큰 만료·서버 재시작 후 API 재호출 | 요청·D-15 | user(Auth) | TEST-07·08 | ⬜ |
+| API-11 | `POST /users/refresh` 리프레시 토큰으로 새 토큰 쌍 재발급 — 액세스 토큰 만료·서버 재시작 후 API 재호출 | 요청·D-15 | user(Auth) | TEST-07·08 | ✅ 200 새 토큰 쌍, 회전·재사용 401·만료·없는 토큰 401(TEST-07·08·09), 서버 재시작 뒤에도 재발급 200 → API 200(S12 bootRun) |
 
 ## 3. 인증·보안 (SEC)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| SEC-01 | 로그인 성공 시 `{ "access_token": "..." }` 포함 | 명세 인증 | user web | TEST-01 | ✅ 응답 필드가 `access_token` 하나(TEST-01, S9 bootRun) |
+| SEC-01 | 로그인 성공 시 `{ "access_token": "..." }` 포함 | 명세 인증 | user web | TEST-01 | ✅ 로그인 응답에 `access_token` 포함(TEST-01은 `$.access_token`만 사용, S9). 8단계부터 확장 필드 `refresh_token`도 함께 반환(S12 bootRun) |
 | SEC-02 | 인증 헤더 `Authorization: Bearer <token>` | 명세 인증 | `global.security` | TEST-01·03 | ✅ 유효 토큰으로 `/users/me` 200(TEST-01, S9), 헤더 없음·형식 오류 401(TEST-03, S8) |
 | SEC-03 | 액세스 토큰 만료 시간(1시간)·README 명시 (Refresh Token은 명세상 선택 → SEC-11로 구현) | 명세 인증·초안·D-06 | `auth.access-token-ttl` | 설정·README | 🟨 `exp - iat = 3600`초, 헤더 HS256, 클레임 `sub·iat·exp`뿐(S9 bootRun). README는 12단계 |
 | SEC-04 | 토큰 없이 요청하면 401 | 명세 테스트 | `global.security` | TEST-03 | ✅ 보호 경로 6개(핸들러는 6·7단계) 토큰 없음 401(TEST-03, S8 JDK 17·21) |
@@ -44,10 +44,10 @@
 | SEC-06 | 비밀번호 평문 저장 금지 (DelegatingPasswordEncoder) | 초안·D-09 | `PasswordHashAdapter` | DB 값이 `{bcrypt}` 접두 해시인지 확인 | ✅ 저장값 `{bcrypt}$2a$10$…`(68자, S9 sqlite3) |
 | SEC-07 | 서명 키 하드코딩 금지(미설정 시 임의 키 생성)·README 설명 | 초안·D-06 | `application.yaml`, JWT 설정 | grep 점검, README | 🟨 `JwtConfig` — 미설정 시 임의 키+WARN, Base64 아님·32바이트 미만은 기동 실패, 로그에 키 값 없음(S8 bootRun). README 설명은 12단계 |
 | SEC-08 | 인증 로직은 공통 보안 구성 (컨트롤러별 중복 금지) | 초안 | `SecurityFilterChain` | 코드 리뷰 | ✅ `SecurityConfig` 하나로 구성(S8), user·todo 컨트롤러는 `@CurrentUserId`만 사용하고 토큰을 직접 파싱하지 않음(S9·S10 독립 리뷰) |
-| SEC-09 | 응답·예외·로그에 비밀번호·키·토큰·민감정보 비노출 | 초안 | 전역 | 응답·로그 확인 | 🟨 user 응답에 비밀번호 없음(TEST-01), 실행 로그에 비밀번호·토큰 없음(S9 bootRun). 최종 점검은 13단계 |
+| SEC-09 | 응답·예외·로그에 비밀번호·키·토큰·민감정보 비노출 | 초안 | 전역 | 응답·로그 확인 | 🟨 user 응답에 비밀번호 없음(TEST-01), 실행 로그에 비밀번호·액세스 토큰·리프레시 토큰 원문 0건, DB에 리프레시 토큰 원문 0건(S9·S12 bootRun). 최종 점검은 13단계 |
 | SEC-10 | OSS 종료 계열 CVE의 전제 기능 미사용 | 설계·D-01 | 전역 | grep 점검(submission-check) | ⬜ |
-| SEC-11 | 리프레시 토큰: 불투명 32바이트·SHA-256 해시 저장·7일 만료·회전·재사용 탐지 | 요청·D-15 | user(Auth), `refresh_tokens` | TEST-08, DB에 원문 없음 확인 | ⬜ |
-| SEC-12 | 공개 인증 엔드포인트는 `Authorization` 헤더를 무시(만료 토큰을 단 재발급 허용) | 설계·D-15 | `BearerTokenResolver` | TEST-07 | 🟨 가입·로그인 경로는 엉터리 Bearer 헤더에도 401이 아님(S8 bootRun — 미구현 경로라 404). `/users/refresh`는 8단계, TEST-07 |
+| SEC-11 | 리프레시 토큰: 불투명 32바이트·SHA-256 해시 저장·7일 만료·회전·재사용 탐지 | 요청·D-15 | user(Auth), `refresh_tokens` | TEST-08, DB에 원문 없음 확인 | ✅ 32바이트 Base64URL(43자)·SHA-256 16진수 64자만 저장·회전·재사용 시 사용자 토큰 전부 폐기(TEST-08, S12 DB 확인)·만료 401(TEST-09)·만료 시각 = 발급 + 604,800,000ms(7일, S12 재확인). 폐기 롤백 함정은 `noRollbackFor` 제거 변이에서 TEST-08 실패로 확인(S12) |
+| SEC-12 | 공개 인증 엔드포인트는 `Authorization` 헤더를 무시(만료 토큰을 단 재발급 허용) | 설계·D-15 | `BearerTokenResolver` | TEST-07 | ✅ 가입·로그인·재발급 경로는 `Authorization` 헤더 무시 — 만료 토큰을 단 재발급 200(TEST-07), 엉터리 Bearer + 재발급 200(S12 bootRun). 공개 경로에서 빼는 변이에서 TEST-07·08·09 실패(S12) |
 
 ## 4. 상태 코드·예외 (ERR)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -65,7 +65,7 @@
 | DB-03 | 테이블·관계(FK 미생성 대응): `users`(username `unique`), `todos`(`user_id` 인덱스) — 7단계 | 초안·D-04·D-10 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ✅ `users`(username `varchar(50) not null unique`), `todos`(`user_id bigint not null` + `idx_todos_user_id`) 클린 bootRun `.schema`(S10) |
 | DB-04 | 개발 DB와 테스트 DB 분리 | 초안·D-10 | `todo.db` / `build/todo-test.db` | 테스트 후 `todo.db` 미변경 | ✅ 테스트는 `build/todo-test.db` 사용, 실행 후 `todo.db` 미생성(S6, JDK 17·21) |
 | DB-05 | `*.db` 커밋·제출 제외 | 명세 제출물 | `.gitignore`, ZIP | `git check-ignore`, `unzip -l` | 🟨 `.gitignore` 검증 완료(2026-10-25), ZIP 미검증 |
-| DB-06 | `refresh_tokens`(`token_hash` `unique`, `user_id` 인덱스) — 8단계(S7에 DB-03에서 분리) | 요청·D-15 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ⬜ |
+| DB-06 | `refresh_tokens`(`token_hash` `unique`, `user_id` 인덱스) — 8단계(S7에 DB-03에서 분리) | 요청·D-15 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ✅ `CREATE TABLE refresh_tokens (id integer, expires_at bigint not null, token_hash varchar(64) not null unique, used boolean not null, user_id bigint not null, primary key (id))` + `idx_refresh_tokens_user_id` — 클린 bootRun `.schema`(S12) |
 
 ## 6. 테스트 (TEST)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
@@ -74,10 +74,11 @@
 | TEST-02 | TODO 생성 → 목록 조회 → 수정 → 삭제 | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoCrudFlowTest` — 생성 201·Location → 목록 1건 → 수정 200·재조회 반영 → 삭제 204 → 단건 404·목록 0건(S10, JDK 17·21) |
 | TEST-03 | 토큰 없이 요청하면 401 (가능하면 무효 토큰도 확인) | 명세 테스트·초안 | `src/test` | `./gradlew test` | ✅ `AuthenticationRequiredTest` — 보호 경로 6개(핸들러는 6·7단계) 토큰 없음·형식 오류 토큰 401, ProblemDetail·`WWW-Authenticate` 검증(S8, JDK 17·21 7건 통과) |
 | TEST-04 | 존재하지 않는 TODO ID로 요청하면 404 — `{id}`를 받는 GET·PUT·DELETE 모두(S10) | 명세 테스트 | `src/test` | `./gradlew test` | ✅ `TodoNotFoundTest` — `Long.MAX_VALUE` ID로 GET·PUT·DELETE 모두 404·ProblemDetail·같은 메시지(S10, JDK 17·21) |
-| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S10: 14건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·X2). 필수 4종 완료, TEST-07·08은 8단계 |
+| TEST-05 | `./gradlew test` 명령으로 실행 | 명세 테스트 | `build.gradle` | 실행 로그 | 🟨 `./gradlew test` 실행 확인(S12: 17건 통과 — contextLoads·TEST-01·02·03(7)·04(3)·07·08·09·X2). TEST-X1·X3·X4는 10단계 |
 | TEST-06 | 반복 실행 일관·테스트 간 데이터 독립·`./gradlew build` 확인 | 초안 | 테스트 구성 | 2회 연속 실행, `build` | ⬜ |
-| TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ⬜ |
-| TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ⬜ |
+| TEST-07 | 액세스 토큰 만료 → 보호 API 401 → `/users/refresh`(만료 토큰이 헤더에 있어도) 200 → 새 토큰으로 같은 API 200 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `TokenRefreshFlowTest` — 서버 키로 만든 만료 토큰 401(`invalid_token`) → 만료 토큰을 헤더에 단 재발급 200 → 새 토큰으로 `/users/me` 200·같은 id(S12, JDK 17·21) |
+| TEST-08 | 리프레시 토큰 회전·재사용 탐지 — 사용한 토큰 재사용 401, 이후 최신 토큰도 401 | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `RefreshTokenRotationTest` — 재발급마다 토큰 교체, 쓴 토큰 재사용 401(`WWW-Authenticate`·ProblemDetail), 이후 최신 토큰도 401(S12, JDK 17·21) |
+| TEST-09 | (확장) 만료된 리프레시 토큰과 없는 토큰도 이미 쓴 토큰과 같은 401 — 수명 0초 별도 컨텍스트(S12 구현 전 재검토로 추가) | 요청·D-15 | `src/test` | `./gradlew test` | ✅ `RefreshTokenExpiryTest`(S12). 만료 확인을 지운 변이에서 실패함을 확인 |
 | TEST-X1 | (선택) 위조 서명·만료 토큰 → 401 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
 | TEST-X2 | (선택) 타인 TODO 조회·수정·삭제 → 404, 목록에 없음, 소유자 데이터 불변 — API-09(명세 필수 동작) 검증이라 7단계에서 작성(S10) | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ✅ `TodoOwnershipTest`(S10). 소유자 조건을 지운 변이에서 이 테스트만 실패함을 확인 |
 | TEST-X3 | (선택) username 중복 가입 → 409 | 명세 선택 사항·설계 | `src/test` | `./gradlew test` | ⬜ |
