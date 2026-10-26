@@ -53,7 +53,7 @@ class TodoController {
 
 	@GetMapping("/search")
 	@Operation(summary = "제목으로 검색", description = "내 TODO 중 제목에 검색어가 들어간 것을 id 오름차순으로 돌려준다. 영문 대소문자를 구분하지 않고, %와 _는 문자 그대로 찾는다")
-	List<TodoResponse> search(@CurrentUserId Long userId, @Valid @ParameterObject TodoSearchRequest request) {
+	List<TodoResponse> search(@CurrentUserId Long userId, @Valid @ParameterObject SearchTodoRequest request) {
 		return todoUseCase.search(userId, request.keyword()).stream()
 				.map(TodoResponse::from)
 				.toList();
