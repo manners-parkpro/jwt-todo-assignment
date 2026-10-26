@@ -9,7 +9,7 @@
 ## 1. 기술·실행 (TECH)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ❌ JDK 27(2026-09 GA)에서 `compileJava` 실패 — Lombok 1.18.46이 JDK 27 미지원(S11 실측). JDK 17·21·25·26은 통과. 수정안(Lombok 1.18.48)은 사본에서 17·21·25·26·27 모두 통과 — 협의 후 반영(R-9) |
+| TECH-01 | Java 17 이상 — 컴파일 대상 17(`release 17`), JDK 17·21에서 빌드 | 명세 기술 조건·D-01 | `build.gradle` | JDK 17·21 `./gradlew test`, class major 61 | ✅ Lombok 1.18.48 반영 후 JDK 17·21 `clean build` 14건 통과(S12), JDK 27 일회 확인 `clean build` 14건 통과(S12). 사본 실측 JDK 25·26 통과(S11). class 61(S4). 정기 교차 확인은 17·21(사용자 결정) |
 | TECH-02 | Spring Boot 3.5.16 | 초안·D-01 | `build.gradle` | `./gradlew dependencies` | ✅ spring-boot 3.5.16 해석 확인(S4) |
 | TECH-03 | Gradle Wrapper 포함, 9.8.2 유지(Boot 3.5 조합 실측) | 명세 기술 조건·D-01 | `gradlew`, `gradle/wrapper/` | `./gradlew --version`, `--warning-mode all` | ✅ Gradle 9.8.2 + Boot 3.5.16, JDK 17·21에서 `clean build` 통과(S7). deprecation 경고 1건(Gradle 11 제거 예정) |
 | TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | ✅ SQLite에서 생성·조회·수정·삭제 동작(TEST-02, S10 bootRun) |
@@ -103,7 +103,7 @@
 | SUB-01 | 파일명 `이름_springboot.zip`, 제출처 채용 사이트(사람인/잡코리아) | 명세 제출물 | — | 파일명 확인 | ⬜ |
 | SUB-02 | 제외: `build/`, `target/`, `.gradle/`, `*.db` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
 | SUB-03 | 포함: 소스 전체 — `src/`, `build.gradle`, `settings.gradle`, `README.md`, `prompts/used_prompts.md` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
-| SUB-04 | Wrapper(`gradlew`, `gradlew.bat`, `gradle/wrapper/*`) 포함·ZIP 안 `gradlew` 실행 권한 유지, `.claude/settings.local.json`·`.claude/*.jsonl`(로컬 기록)·`HELP.md` 제외 | 설계·D-13·D-16 | ZIP | `unzip -l`, `zipinfo`(gradlew `-rwxr-xr-x`) | 🟨 `HELP.md` 삭제 완료, 저장소의 `gradlew` 모드 100755·LF, `gradlew.bat` CRLF 확인(S10), ZIP 미검증 |
+| SUB-04 | Wrapper(`gradlew`, `gradlew.bat`, `gradle/wrapper/*`) 포함·ZIP 안 `gradlew` 실행 권한 유지, `.claude/settings.local.json`·`.claude/*.jsonl`(로컬 기록)·`HELP.md` 제외 | 설계·D-13·D-16 | ZIP | `unzip -l`, `zipinfo`(gradlew `-rwxr-xr-x`) | 🟨 `HELP.md` 삭제 완료, `memory-bank/` 제외(S12 `.gitignore`·SKILL), 시험 ZIP에서 `gradlew` `-rwxr-xr-x` 유지·제외 목록 동작 확인(S12). 최종 ZIP은 13단계 |
 | SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `git ls-tree`, `unzip -l` | 🟨 원격 트리 제외 확인(S7, `origin/main`), ZIP 미검증 |
 | SUB-06 | 커밋 작성자 정보에 회사 도메인 없음(닉네임 + GitHub noreply) | 요청·D-13·D-19 | 저장소 로컬 git 설정, `guard-git.py` 훅 | `git log --format='%ae %ce'` | ✅ 원격 `main`의 모든 커밋 작성자·커미터가 noreply(S7), `manners-parkpro` 연결(S5, GitHub API). 커밋·푸시 훅이 강제(S7) |
 
@@ -124,8 +124,8 @@
 | R-5 | 원격 저장소가 공개 — 비밀·명세 사본이 올라가면 안 됨 | 커밋 전 `git status`·`check-ignore` 확인, 비밀은 저장소에 두지 않음(SEC-07) |
 | R-6 | 원격에 회사 도메인 이메일이 담긴 커밋 `52809a9`가 남아 있음. force push 뒤에도 GitHub는 SHA로 접근 가능한 캐시를 남길 수 있음(GitHub 문서) | 해결(S5): 저장소 재생성, 이전 커밋 조회 시 HTTP 409 |
 | R-7 | SQLite PK에 AUTOINCREMENT가 없어 삭제된 마지막 ID가 다른 사용자의 새 행에 다시 쓰인다(S10 재현) | 소유권 조건 `id + userId`로 타인 데이터 비노출(D-08) — TEST-X2로 검증, 테스트의 "없는 ID"는 `Long.MAX_VALUE` |
-| R-8 | 압축 해제 도구에 따라 ZIP 안 `gradlew`의 실행 권한이 빠지면 README의 `./gradlew`가 실패(실격 조건 1) | `zipinfo`로 권한 확인(submission-check), README에 `chmod +x gradlew` 안내(12단계 실측) |
-| R-9 | 명세 "Java 17 이상"에 상한이 없는데 JDK 27에서 `compileJava`가 실패한다(Boot가 관리하는 Lombok 1.18.46이 JDK 27 미지원, S11 실측) → README 명령 실패(실격 조건 1) | 수정안 `ext['lombok.version'] = '1.18.48'` — 사본에서 JDK 17·21·25·26·27 빌드·테스트·`bootRun` 통과. 사용자 협의 후 반영 |
-| R-10 | 도구가 프로젝트 루트에 `memory-bank/`(템플릿·파일 목록)를 다시 만들었다(S11, 09:22) — 커밋·ZIP에 섞일 수 있다 | 커밋은 경로를 지정해 제외 중. 삭제 또는 `.gitignore`·ZIP 제외를 사용자와 협의 |
+| R-8 | 압축 해제 도구에 따라 ZIP 안 `gradlew`의 실행 권한이 빠지면 README의 `./gradlew`가 실패(실격 조건 1) | SKILL 명령으로 만든 시험 ZIP에서 `-rwxr-xr-x` 저장·`unzip` 후 유지 확인(S12). `zipinfo` 점검(13단계), README에 `chmod +x gradlew` 안내(12단계 실측) |
+| R-9 | 명세 "Java 17 이상"에 상한이 없는데 JDK 27에서 `compileJava`가 실패했다(Lombok 1.18.46, S11 실측) | 해결(S12, 사용자 결정): `ext['lombok.version'] = '1.18.48'` — JDK 17·21·27 `clean build` 통과(저장소), 25·26은 사본 실측(S11) |
+| R-10 | 도구가 프로젝트 루트에 `memory-bank/`(템플릿·파일 목록)를 다시 만들었다(S11, 09:22) — 커밋·ZIP에 섞일 수 있다 | 해결(S12, 사용자 결정): 폴더는 두고 `.gitignore`와 SKILL ZIP 제외 목록에 추가, `git check-ignore`·시험 ZIP으로 확인 |
 
 해결됨(2026-10-25): 원문 명세 확보·대조, Lombok·springdoc 유지 결정, `memory-bank/` 삭제, Git 저장소 초기화와 원격 연결.

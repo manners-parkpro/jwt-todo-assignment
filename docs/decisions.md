@@ -7,7 +7,7 @@
 
 | ID | 결정 | 상태 |
 |---|---|---|
-| D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 | 확정(S11: JDK 27 대응 협의 중) |
+| D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 · Lombok 1.18.48 | 확정(S12 Lombok 보완) |
 | D-02 | Lombok·springdoc 유지와 사용 범위 | 확정 |
 | D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정(포트 이름·Command 범위·반환 타입은 → D-20) |
 | D-04 | 도메인 모델·JPA 엔티티 분리, 집합체 간 ID 참조 | 확정 |
@@ -44,12 +44,14 @@
   - 공식 범위: Gradle 9.8.2는 JDK 17~27에서 실행(28 미지원), Boot 3.5.16은 공식 호환 ~25, Boot가 관리하는 Lombok 1.18.46은 ~26.
   - 커밋본을 새 경로에 풀어 실행: JDK 17·25·26 통과, **JDK 27은 Lombok 때문에 `compileJava` 실패**(javac 내부 클래스 `EndPosTable` 제거).
   - 사본에서 Lombok 1.18.48(JDK 27 지원)로 올리면 17·21·25·26·27 모두 빌드·테스트·`bootRun`이 통과했다. 반영 여부는 사용자 협의 후 결정한다.
+- **결정(사용자 2026-10-26, S12)**: `ext['lombok.version'] = '1.18.48'`로 올린다(Lombok 제거는 잃는 것이 많아 채택하지 않음 — D-02). 교차 확인 JDK는 늘리지 않고 17·21을 유지한다 — S11의 25·26·27 실측과 S12의 JDK 27 일회 확인(저장소 `clean build` 14건 통과)은 이 수정의 근거 기록이며 정기 검증이 아니다.
 - **검증 정책(사용자 결정 2026-10-25)**: 기본 개발·검증은 JDK 17(타깃·명세 최소 버전), 단계 완료와 제출 전에 JDK 21로 한 번 교차 확인한다. 21 확인의 목적은 코드가 아니라 빌드 환경이다 — toolchain이 없으므로 채점자의 JDK에서 Gradle·javac·Lombok 애너테이션 프로세서·테스트 라이브러리가 실행되며, 대상이 17이어도 새 JDK에서 빌드가 깨질 수 있다(예: Lombok 1.18.28 이하는 JDK 21 javac에서 컴파일 실패, Gradle 8.14는 JDK 25에서 실행 불가).
 
 ### D-02 Lombok·springdoc 유지 — 확정
 - **결정**: 둘 다 유지(사용자 결정). Lombok은 main 코드에만 쓰고 사용 범위를 제한한다(architecture.md). springdoc은 Boot 3.5용 2.8.17. Swagger 경로는 `permitAll`, `@SecurityRequirement`는 보호 API에만 붙인다.
 - **근거**: 채점자가 브라우저로 API를 시험할 수 있다. springdoc 2.8.17 POM은 Boot 3.5.13 기준이다. springdoc 2.8.17의 `ObjectMapperProvider`는 자체 `Json.mapper()`를 써서 Spring의 전역 Jackson 네이밍 전략을 스키마에 반영하지 않는다(소스 확인) → D-07.
 - **대안**: springdoc 제거(YAGNI 관점의 권장안이었음).
+- **보완(S12)**: Boot가 관리하는 Lombok 1.18.46이 JDK 27에서 컴파일되지 않아 Lombok 제거도 검토했으나, 사용자 결정으로 유지하고 버전만 1.18.48로 올린다(D-01).
 
 ### D-03 기능별 헥사고날 + 경량 DDD — 확정
 - **결정**: `user`, `todo` 패키지마다 `domain` / `application`(`port.in`, `port.out`, `service`) / `adapter`(`in.web`, `out.persistence`, `out.security`), 공통은 `global`(`security`, `error`, `config`). In Port는 책임별 인터페이스(`UserUseCase` 가입·내 정보, `AuthUseCase` 로그인·재발급, `TodoUseCase`), Out Port는 `UserRepository`·`TodoRepository`·`RefreshTokenRepository`·`PasswordHasher`·`TokenIssuer`. Command record는 파라미터가 많은 유스케이스에만 쓴다. (포트 이름·Command 범위·반환 타입은 대체됨 → D-20)
@@ -108,7 +110,7 @@
 - **결정**:
   - 문서 체계: `CLAUDE.md`(상시 로드) + `.claude/rules/` 7개(경로 한정 자동 로드) + `.claude/skills/submission-check`(사용자가 실행하는 제출 절차) + `.claude/agents/step-reviewer.md`(단계 리뷰, D-19) + `docs/`(체크리스트·결정·진행, 명세 사본) + `prompts/used_prompts.md`(명세대로 "간단히").
   - 진행: 설계 승인(2026-10-25, used_prompts #2) → 단계별 계획·구현·검증·리뷰·보고 → 사용자 확인 후 다음 단계.
-  - 공개 저장소 `https://github.com/manners-parkpro/jwt-todo-assignment.git`(`main`): 명세 사본 `docs/assignment-spec.md`는 `.gitignore`로 제외하고 로컬·제출 ZIP에만 둔다(사용자 결정).
+  - 공개 저장소 `https://github.com/manners-parkpro/jwt-todo-assignment.git`(`main`): 명세 사본 `docs/assignment-spec.md`는 `.gitignore`로 제외하고 로컬·제출 ZIP에만 둔다(사용자 결정). 도구(memory-bank MCP)가 다시 만든 `memory-bank/`는 로컬에 남기고 `.gitignore`와 ZIP 제외 목록으로 뺀다(사용자 결정 S12).
   - 커밋·푸시: 단계 검증과 문서 갱신을 마친 뒤 커밋하고 푸시한다(사용자 지시 2026-10-25 "nickname 만 부착하여 commit + push"). 강제 푸시·저장소 재생성 같은 원격 기록 덮어쓰기는 사용자가 직접 한다.
   - 작성자: 저장소 로컬 git 설정의 닉네임 `Colin` + GitHub noreply 주소(회사 도메인 제외 — 사용자 요청). 초기 커밋은 작성자만 바꿔 다시 만들었고, 사용자가 저장소를 재생성해 이전 커밋은 조회되지 않는다(HTTP 409).
   - 푸시 인증: 저장소 로컬 자격 증명 헬퍼가 `gh auth token --user manners-parkpro`를 쓴다(사용자 결정 C안, 설정은 `docs/progress.md` 환경 메모). gh 기본 헬퍼는 활성 계정 토큰만 반환하므로(gh 2.90.0 소스), 전역 계정 전환 없이 이 저장소만 개인 계정으로 푸시한다.

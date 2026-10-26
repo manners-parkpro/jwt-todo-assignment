@@ -3,8 +3,8 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-26
-- **단계: 7단계(Todo) 완료 → 사용자 협의 대기(S11 — JDK 27 실격 위험 수정안, 테이블 생성 문구, `memory-bank/` 처리) → 8단계.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
-- **알려진 실격 위험(S11)**: JDK 27에서 `compileJava` 실패(Lombok 1.18.46). 수정안(Lombok 1.18.48)은 사본에서 JDK 17·21·25·26·27 통과 — 협의 후 반영.
+- **단계: 7단계(Todo) 완료, 협의 결과 반영(S12) → 8단계 진행 중.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 협의 결과(S12, 사용자 결정): Lombok 1.18.48로 JDK 27 실격 위험 해결, 정기 교차 확인 JDK는 17·21 유지, `memory-bank/`는 로컬에 두고 Git·ZIP에서만 제외. Windows 실측(GitHub Actions)은 채택하지 않음(D-18 유지), README 안내 항목은 12단계에서 실측 후 반영.
 - 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(14건 — contextLoads·TEST-01·02·03(7)·04(3)·X2, S10). `bootRun`에서 TODO 흐름·오류·소유권·동시 요청 확인(S10).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
@@ -32,6 +32,16 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-26 · S12 협의 결과 반영(Lombok 1.18.48, memory-bank 제외)
+- 반영: `build.gradle`에 `ext['lombok.version'] = '1.18.48'`(build.md·D-01·D-02), `.gitignore`에 `memory-bank/`, SKILL ZIP 제외 목록에 `memory-bank/*`(D-13), persistence.md에 테이블 생성 시점·DB 위치(S11 실측) 명시
+- 실행 명령과 결과:
+  - `dependencyInsight` → `org.projectlombok:lombok:1.18.48 (selected by rule)`
+  - JDK 17 `./gradlew test` → 14건 통과. JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0
+  - JDK 27(Corretto 27.0.1, 이 수정의 일회 확인) `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0
+  - `git check-ignore -v memory-bank/activeContext.md` → `.gitignore:50`. SKILL과 같은 명령으로 만든 시험 ZIP: `build`·`.gradle`·`memory-bank`·`.idea`·`.git`·`*.db`·`*.jsonl` 없음, 필수 파일 7종 포함, `gradlew` `-rwxr-xr-x`가 ZIP 안과 `unzip` 뒤 모두 유지(R-8) — 시험 ZIP은 확인 후 삭제
+- 답이 없던 항목: Windows 실측(3번)은 현행 유지(D-18), README 안내(4번)는 12단계 계획대로
+- 다음: 8단계 설계 재검토 → 구현
 
 ### 2026-10-26 · S11 테이블 생성 시점 확인, JDK 실행 범위 점검(JDK 27 실격 위험)
 - 질문: 테이블이 서버 기동 때 생기는지, README 명령을 해야 생기는지 → 기동 때 자동 생성(실행 방법과 무관), README `bootRun`이 곧 기동

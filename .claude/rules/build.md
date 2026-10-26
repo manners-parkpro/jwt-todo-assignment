@@ -19,6 +19,7 @@ paths:
 - 현재 구성은 `build.gradle`이 기준이다. Lombok은 main에만 쓰고(`compileOnly` + `annotationProcessor`) 테스트 의존성으로 추가하지 않는다.
 - Boot 4 전용 아티팩트(`spring-boot-starter-webmvc`, `*-test` 모듈 스타터)와 springdoc 3.x는 쓰지 않는다.
 - 보안 패치 오버라이드: `ext['tomcat.version'] = '10.1.61'`. Boot 3.5의 OSS 지원이 끝난 뒤에도 Apache가 OSS로 패치하는 Tomcat만 올린다. Spring 계열은 OSS 패치가 없으므로 `security.md`의 사용 금지 기능으로 대응한다.
+- JDK 호환 오버라이드: `ext['lombok.version'] = '1.18.48'`. Boot가 관리하는 1.18.46은 JDK 27 javac에서 컴파일이 실패한다(S11 실측 — 명세 "Java 17 이상"이라 채점 JDK 상한이 없다). 1.18.48로 JDK 17·21·25·26·27 빌드·테스트·`bootRun`을 한 번 실측했다(D-01). Gradle 9.8.2가 실행되는 JDK는 17~27이다.
 - 새 의존성은 추가하기 전에 `docs/decisions.md`에 필요성을 남긴다.
 
 ## 검증
@@ -28,5 +29,6 @@ JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew --version                   
 JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew clean test --warning-mode all     # 기본 검증(명세 최소·타깃 JDK)
 JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew clean build --warning-mode all    # 단계 완료·제출 전 교차 확인
 ./gradlew dependencyInsight --dependency tomcat-embed-core --configuration runtimeClasspath   # 10.1.61
+./gradlew dependencyInsight --dependency org.projectlombok:lombok --configuration annotationProcessor   # 1.18.48
 javap -v -cp build/classes/java/main com.assignment.AssignmentApplication | grep 'major version'  # 61 = Java 17
 ```

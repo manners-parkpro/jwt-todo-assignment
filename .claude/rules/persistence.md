@@ -9,6 +9,7 @@ paths:
 
 ## 테이블 생성 경로 (제약)
 - 테이블은 README에 적힌 명령(`./gradlew bootRun`, `./gradlew test`)을 실행하는 것만으로 생성된다. 생성 경로는 Hibernate `ddl-auto` 하나다(앱 `update`, 테스트 `create-drop`).
+- `ddl-auto`는 애플리케이션이 기동될 때(Tomcat이 요청을 받기 전) 실행되므로 실행 방법(README 명령·IDE·`java -jar`)과 상관없이 테이블이 생기고, 재기동은 기존 테이블·데이터를 그대로 둔다. DB 파일은 프로세스의 작업 디렉터리에 생긴다(`bootRun`은 프로젝트 루트) — S11 실측.
 - 금지: 수동 SQL, `schema.sql`·`data.sql`(`spring.sql.init`), 별도 마이그레이션 명령·스크립트, 미리 만든 DB 파일 제공.
 - README에는 SQL·`sqlite3` 명령을 적지 않는다(확인용으로도). 생성 확인은 개발 측 검증으로만 하고 근거를 `docs/progress.md`에 남긴다.
 
