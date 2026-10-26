@@ -2,6 +2,7 @@ package com.assignment.global.security;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -15,7 +16,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.UUID;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,20 +44,21 @@ class InvalidTokenTest extends IntegrationTestSupport {
 		new SecureRandom().nextBytes(anotherKey);
 		JwtEncoder forger = new NimbusJwtEncoder(new ImmutableSecret<>(new SecretKeySpec(anotherKey, "HmacSHA256")));
 
-		expectInvalidToken(encode(forger, userId, Instant.now().plus(Duration.ofHours(1))));
+		expectInvalidToken(encode(forger, userId, Instant.now().plus(Duration.ofHours(1))), "Invalid signature");
 	}
 
 	@Test
 	@DisplayName("[TEST-X1] 서명은 그대로 두고 sub(사용자 ID)를 다른 사용자로 바꾼 토큰은 401")
 	void tamperedSubjectIsUnauthorized() throws Exception {
 		String accessToken = signupAndLogin();
-		long otherUserId = myId(signupAndLoginAs("user-" + UUID.randomUUID(), "password1234").accessToken());
+		long otherUserId = myId(signupAndLogin());
 		String[] parts = accessToken.split("\\.");
 		String payload = new String(Base64.getUrlDecoder().decode(parts[1]), UTF_8);
 		String tamperedPayload = payload.replaceFirst("\"sub\":\"\\d+\"", "\"sub\":\"" + otherUserId + "\"");
 		assertThat(tamperedPayload).isNotEqualTo(payload);
 
-		expectInvalidToken(parts[0] + "." + BASE64_URL.encodeToString(tamperedPayload.getBytes(UTF_8)) + "." + parts[2]);
+		expectInvalidToken(parts[0] + "." + BASE64_URL.encodeToString(tamperedPayload.getBytes(UTF_8)) + "." + parts[2],
+				"Invalid signature");
 	}
 
 	@Test
@@ -69,7 +70,7 @@ class InvalidTokenTest extends IntegrationTestSupport {
 		String payload = BASE64_URL.encodeToString("""
 				{"sub":"%d","iat":%d,"exp":%d}""".formatted(userId, now, now + 3600).getBytes(UTF_8));
 
-		expectInvalidToken(header + "." + payload + ".");
+		expectInvalidToken(header + "." + payload + ".", "Unsupported algorithm of none");
 	}
 
 	@Test
@@ -77,7 +78,8 @@ class InvalidTokenTest extends IntegrationTestSupport {
 	void expiredTokenIsUnauthorized() throws Exception {
 		long userId = myId(signupAndLogin());
 
-		expectInvalidToken(encode(jwtEncoder, userId, Instant.now().minus(Duration.ofSeconds(1))));
+		// 1초 전에 만료 — 시계 오차를 기본값(60초)으로 두면 통과해 버리므로 오차 0 설정을 지킨다
+		expectInvalidToken(encode(jwtEncoder, userId, Instant.now().minus(Duration.ofSeconds(1))), "expired");
 	}
 
 	private static String encode(JwtEncoder encoder, long userId, Instant expiresAt) {
@@ -90,10 +92,12 @@ class InvalidTokenTest extends IntegrationTestSupport {
 		return encoder.encode(JwtEncoderParameters.from(jwsHeader, claims)).getTokenValue();
 	}
 
-	private void expectInvalidToken(String token) throws Exception {
+	// 거부 사유(error_description)까지 확인해, 다른 이유로 401이 나서 우연히 통과하지 않게 한다
+	private void expectInvalidToken(String token, String reason) throws Exception {
 		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
 				.andExpect(status().isUnauthorized())
-				.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("invalid_token")))
+				.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
+						allOf(containsString("error=\"invalid_token\""), containsString(reason))))
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
 				.andExpect(jsonPath("$.status").value(401));
 	}
