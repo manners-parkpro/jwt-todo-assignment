@@ -38,8 +38,9 @@ disable-model-invocation: true
    P="$(basename "$PWD")"; N="$ARGUMENTS"
    cd .. && zip -rq "${N}_springboot.zip" "$P" \
      -x "$P/build/*" "$P/target/*" "$P/.gradle/*" "$P/out/*" "$P/bin/*" "$P/.idea/*" "$P/.vscode/*" "$P/.git/*" \
-        "*.db" "*.db-*" "*.iml" "*.DS_Store" "$P/.env*" "$P/.claude/settings.local.json" "$P/.claude/*.jsonl" "$P/HELP.md"
-   unzip -l "${N}_springboot.zip" | grep -E '/(build|target|\.gradle)/|\.db|\.jsonl' && echo '!! 제외 실패'
+        "*.db" "*.db-*" "*.iml" "*.DS_Store" "$P/.env*" "$P/.claude/settings.local.json" "$P/.claude/*.jsonl" "$P/HELP.md" \
+        "$P/memory-bank/*"
+   unzip -l "${N}_springboot.zip" | grep -E '/(build|target|\.gradle|memory-bank)/|\.db|\.jsonl' && echo '!! 제외 실패'
    unzip -l "${N}_springboot.zip" | grep -E 'gradlew$|gradle-wrapper\.jar|settings\.gradle|README\.md|prompts/used_prompts\.md|docs/assignment-spec\.md|src/(main|test)/' | head
    zipinfo "${N}_springboot.zip" "$P/gradlew"   # -rwxr-xr-x 여야 한다(실행 권한이 빠지면 README의 ./gradlew가 실패)
    unzip -p "${N}_springboot.zip" "$P/prompts/used_prompts.md" | tail -n 5   # 최신 항목이 들어갔는지 확인

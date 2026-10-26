@@ -46,3 +46,5 @@ out/
 .claude/prompt-history.jsonl
 .claude/instructions-log.jsonl
 docs/assignment-spec.md
+# 도구(memory-bank MCP)가 만드는 로컬 기록 — 폴더는 두고 저장소·제출 ZIP에서만 뺀다
+memory-bank/
