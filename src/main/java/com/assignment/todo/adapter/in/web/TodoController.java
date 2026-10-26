@@ -1,7 +1,12 @@
 package com.assignment.todo.adapter.in.web;
 
+import com.assignment.global.config.OpenApiConfig;
 import com.assignment.global.security.CurrentUserId;
 import com.assignment.todo.application.port.in.TodoUseCase;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -20,12 +25,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/todos")
+@Tag(name = "TODO")
+@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 @RequiredArgsConstructor
 class TodoController {
 
 	private final TodoUseCase todoUseCase;
 
 	@PostMapping
+	@Operation(summary = "생성")
+	// 문서 생성기는 ResponseEntity가 정하는 상태 코드를 알 수 없어 200으로 표시하므로 201을 명시한다
+	@ApiResponse(responseCode = "201", description = "생성됨 — Location 헤더에 새 TODO 경로(/todos/{id})")
 	ResponseEntity<TodoResponse> create(@CurrentUserId Long userId, @Valid @RequestBody CreateTodoRequest request) {
 		TodoResponse response = TodoResponse.from(todoUseCase.create(request.toCommand(userId)));
 		// 요청의 Host 헤더에 의존하지 않도록 상대 경로로 둔다(RFC 9110 §10.2.2 허용)
@@ -33,6 +43,7 @@ class TodoController {
 	}
 
 	@GetMapping
+	@Operation(summary = "내 목록 조회", description = "id 오름차순으로 돌려준다")
 	List<TodoResponse> getAll(@CurrentUserId Long userId) {
 		return todoUseCase.getAll(userId).stream()
 				.map(TodoResponse::from)
@@ -40,11 +51,13 @@ class TodoController {
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "단건 조회")
 	TodoResponse get(@CurrentUserId Long userId, @PathVariable Long id) {
 		return TodoResponse.from(todoUseCase.get(userId, id));
 	}
 
 	@PutMapping("/{id}")
+	@Operation(summary = "수정", description = "전체 교체라 completed도 필수다. description을 빼면 설명이 지워진다")
 	TodoResponse update(@CurrentUserId Long userId, @PathVariable Long id,
 			@Valid @RequestBody UpdateTodoRequest request) {
 		return TodoResponse.from(todoUseCase.update(request.toCommand(userId, id)));
@@ -52,6 +65,7 @@ class TodoController {
 
 	@DeleteMapping("/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@Operation(summary = "삭제")
 	void delete(@CurrentUserId Long userId, @PathVariable Long id) {
 		todoUseCase.delete(userId, id);
 	}

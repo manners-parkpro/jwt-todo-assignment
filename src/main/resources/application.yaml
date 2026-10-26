@@ -20,3 +20,12 @@ auth:
   access-token-ttl: 1h
   # 리프레시 토큰은 DB에 해시로 저장하는 불투명 토큰이라 서명 키와 무관하다 — 서버를 재시작해도 재발급에 쓸 수 있다
   refresh-token-ttl: 7d
+
+springdoc:
+  # API 문서와 Swagger UI는 브라우저로 API를 시험할 수 있도록 일부러 켠다(명시하지 않으면 기동할 때 기본 활성 경고가 남는다)
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+  # 컨트롤러에 produces를 적지 않아 응답 형식이 */*로 문서화되므로 실제 형식(JSON)을 기본값으로 둔다
+  default-produces-media-type: application/json
