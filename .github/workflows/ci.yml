@@ -1,0 +1,66 @@
+# README에 적은 명령(macOS/Linux는 ./gradlew, Windows는 .\gradlew.bat)을 세 운영체제와 JDK 17·21에서 그대로 실행해 확인한다
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readme-commands:
+    name: ${{ matrix.os }} / JDK ${{ matrix.java }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: gradle/actions/wrapper-validation@v6
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: gradle
+
+      - name: 테스트 — ./gradlew test
+        if: runner.os != 'Windows'
+        run: ./gradlew test
+      - name: 테스트 — .\gradlew.bat test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat test
+
+      # todo.db가 없는 상태에서 실행 명령만으로 서버를 띄우고, 테이블이 생겨야 성공하는 API를 호출한다
+      - name: 실행 — ./gradlew bootRun 후 API 확인
+        if: runner.os != 'Windows'
+        run: |
+          rm -f todo.db
+          ./gradlew bootRun > bootrun.log 2>&1 &
+          java .github/ci/ReadmeSmoke.java
+          sqlite3 todo.db '.schema'
+      - name: 실행 — .\gradlew.bat bootRun 후 API 확인
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-Item todo.db -ErrorAction SilentlyContinue
+          Start-Process -FilePath .\gradlew.bat -ArgumentList 'bootRun' -NoNewWindow -RedirectStandardOutput bootrun.log -RedirectStandardError bootrun-error.log
+          java .github/ci/ReadmeSmoke.java
+          if (-not (Test-Path todo.db)) { throw 'todo.db was not created' }
+
+      - name: 실패 시 로그 보관
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.os }}-jdk${{ matrix.java }}
+          path: |
+            bootrun*.log
+            build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
