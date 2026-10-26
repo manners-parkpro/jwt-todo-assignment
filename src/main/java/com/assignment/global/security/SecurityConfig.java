@@ -20,7 +20,8 @@ public class SecurityConfig {
 
 	private static final RequestMatcher PUBLIC_AUTH_ENDPOINTS = new OrRequestMatcher(
 			PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/users/signup"),
-			PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/users/login"));
+			PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/users/login"),
+			PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/users/refresh"));
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -47,7 +48,7 @@ public class SecurityConfig {
 	}
 
 	// 리소스 서버는 permitAll 경로에서도 헤더의 토큰을 검증하므로, 공개 엔드포인트에서는 헤더를 무시해
-	// 만료된 토큰을 그대로 실어 보내는 클라이언트도 다시 로그인할 수 있게 한다
+	// 만료된 토큰을 그대로 실어 보내는 클라이언트도 다시 로그인하거나 토큰을 재발급받을 수 있게 한다
 	private static BearerTokenResolver bearerTokenResolver() {
 		DefaultBearerTokenResolver defaultResolver = new DefaultBearerTokenResolver();
 		return request -> PUBLIC_AUTH_ENDPOINTS.matches(request) ? null : defaultResolver.resolve(request);

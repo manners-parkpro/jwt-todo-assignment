@@ -19,4 +19,9 @@ class AuthController {
 	TokenResponse login(@Valid @RequestBody LoginRequest request) {
 		return TokenResponse.from(authUseCase.login(request.toCommand()));
 	}
+
+	@PostMapping("/refresh")
+	TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
+		return TokenResponse.from(authUseCase.refresh(request.toCommand()));
+	}
 }
