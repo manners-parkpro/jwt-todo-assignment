@@ -9,7 +9,7 @@ paths:
 
 ## README.md (제출물 — 명세: 선택한 스택, 실행 방법, 테스트 실행 방법, API 목록 요약)
 1. 선택한 스택 — "B. Spring Boot"와 버전(Java 17 이상·Spring Boot 3.5.16·Gradle Wrapper 9.8.2·Spring Data JPA·SQLite3·JWT(HS256)·JUnit 5)
-2. 사전 요구사항 — JDK 17 이상(Gradle 별도 설치 불필요)
+2. 사전 요구사항 — JDK 17 이상(Gradle 별도 설치 불필요). 압축 해제 도구에 따라 `gradlew`의 실행 권한이 빠질 수 있으므로 `Permission denied`일 때의 `chmod +x gradlew`를 함께 적는다(실격 조건 1 대비, 실측 후 기록)
 3. 실행 방법 — `./gradlew bootRun`. 테이블은 이 명령만으로 자동 생성된다(`ddl-auto: update`, `todo.db` 위치)고 적는다. `JWT_SECRET`은 선택(미설정 시 임의 키, 재시작하면 액세스 토큰 무효 → 재발급)이며 고정하는 방법을 macOS/Linux 명령으로 적는다.
 4. 테스트 실행 방법 — `./gradlew test` (환경 변수 불필요)
 5. API 목록 요약 — `.claude/rules/api.md` 표와 일치, Swagger UI 주소

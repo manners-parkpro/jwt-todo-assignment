@@ -40,7 +40,8 @@ disable-model-invocation: true
      -x "$P/build/*" "$P/target/*" "$P/.gradle/*" "$P/out/*" "$P/bin/*" "$P/.idea/*" "$P/.vscode/*" "$P/.git/*" \
         "*.db" "*.db-*" "*.iml" "*.DS_Store" "$P/.env*" "$P/.claude/settings.local.json" "$P/.claude/*.jsonl" "$P/HELP.md"
    unzip -l "${N}_springboot.zip" | grep -E '/(build|target|\.gradle)/|\.db|\.jsonl' && echo '!! 제외 실패'
-   unzip -l "${N}_springboot.zip" | grep -E 'gradlew$|gradle-wrapper\.jar|README\.md|prompts/used_prompts\.md|docs/assignment-spec\.md|src/(main|test)/' | head
+   unzip -l "${N}_springboot.zip" | grep -E 'gradlew$|gradle-wrapper\.jar|settings\.gradle|README\.md|prompts/used_prompts\.md|docs/assignment-spec\.md|src/(main|test)/' | head
+   zipinfo "${N}_springboot.zip" "$P/gradlew"   # -rwxr-xr-x 여야 한다(실행 권한이 빠지면 README의 ./gradlew가 실패)
    unzip -p "${N}_springboot.zip" "$P/prompts/used_prompts.md" | tail -n 5   # 최신 항목이 들어갔는지 확인
    ```
 8. **최종 보고** — 검증하지 못한 항목은 이유와 함께 밝힌다.

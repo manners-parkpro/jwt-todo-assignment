@@ -14,6 +14,7 @@
 | 6 | 2026-10-25 | 압축 뒤 프롬프트 기록·CLAUDE.md 로드 검증, 설계 문서 리팩터링(독립 리뷰·best practices 대조), 강제 훅 추가 | 반영 |
 | 7 | 2026-10-25 | 사용자 참조 이름(userId vs ownerId) 검토·결정, 5단계 보안 골격(TEST-03) | 반영 |
 | 8 | 2026-10-25 | 6단계 설계 재검토와 회원가입·로그인·내 정보(TEST-01) | 반영 |
+| 9 | 2026-10-25 | 7단계 전 명세 재대조, TODO 기능(TEST-02·04·X2), Result·네이밍 정리(D-20) | 반영 |
 
 ---
 
@@ -296,3 +297,47 @@ b. 통상적으로 userId 를 많이 사용하는데 ownerId 로 변경시 코�
 - 처음 설계는 가입·로그인에 같은 비밀번호 검증을 두려 했다. 소스 확인으로 로그인에는 필요 없음을 확인하고 바꿨다.
 
 **⑥ 반영** — `user` 기능 전체(도메인, 포트, 서비스, 예외, 웹·영속성·보안 어댑터), `@CurrentUserId`, `JwtEncoder` 빈, `auth.access-token-ttl`, 검증 오류·기능 예외 매핑, `UserAuthFlowTest`(TEST-01), rules·결정(D-03·D-09)·체크리스트·진행 문서.
+
+---
+
+## #9 7단계 전 명세 재대조, TODO 기능, Result·네이밍 정리
+
+**① 목적** — 7단계(TODO 기능)에 들어가기 전에 과제 명세 원문과 설계를 다시 대조해 누락·오류·보강할 점을 찾고, 반영해 TODO 기능을 구현한다. 작업 중 추가 지시로 유스케이스 결과(Result)와 웹 응답(Response)을 분리하고 참고 프로젝트의 네이밍 규칙을 적용한다.
+
+**② 주요 프롬프트** (원문)
+```text
+### 진행 사항
+진행전, `https://chalk-mitten-2ee.notion.site/JWT-TODO-API-3db5808f6b8d805f8ad9e32a54cd66e6` 과제에서 요구 하는 사항 중
+`누락되거나 잘못된 부분이 설계에`없는지 확인하고  `추가로 보강하면` 더 좋은 사항이 있는지 `면밀히 검증하고 검토하고` 나서 진행한다.
+```
+- 작업 중 추가 지시(원문 — 참고 프로젝트 경로는 회사 관련이라 공개 기록에서 `<참고 프로젝트>`로 가림, 원문은 로컬 백업에 보관):
+```text
+### 추가 요청사항 및 수정사항
+src/main/java/com/assignment/todo/adapter/in/web/TodoResponse.java 가 아니라
+Result 에서 -> Response 로 변환되게 고도화 한다.
+Response 로 한번에 변환하여 내리면 결합도가 강하여 추후 문제될 가능성이 높다.
+추가로, CLAUDE.md 에 작성되 있듯이 SOLID 원칙에 위배된다.
+
+
+또한, src/main/java/com/assignment/todo/adapter/out/persistence/TodoPersistenceAdapter.java
+네이밍 또한 TodoRepositoryAdapter 가 맞는거 같애.
+네이밍 규칙은 아래 프로젝트를 참고하여 보강 및 수정한다.
+
+<참고 프로젝트>
+```
+
+**③ AI 제안 핵심**
+- 명세 재대조: 누락·오류는 없었다. 보강 — 명세의 필수 동작("본인의 TODO만")을 검증하는 TEST-X2를 10단계에서 7단계로 당기고, TEST-04를 GET·PUT·DELETE로 넓힌다. SQLite ID 재사용, 제출 ZIP의 `gradlew` 실행 권한, 8단계 롤백 함정을 문서에 반영한다.
+- 추가 지시: 유스케이스는 Result를 돌려주고 웹 어댑터가 Response로 바꾼다(user 기능 포함). 참고 프로젝트 네이밍(Command·Result, CommandPort·QueryPort·`<대상>Port`, RepositoryAdapter·Adapter)을 따르되, Request/Response는 package-private 유지를 위해 `web` 패키지에 두고 JPA 엔티티는 `JpaEntity`로 구분한다(D-20).
+
+**④ 확인 방법**
+- 명세: Notion 원문을 다시 받아(공개 API) 로컬 사본과 블록 76개가 같음을 확인했다. Hibernate 6.6.53 소스(`SQLiteIdentityColumnSupport`, `IndexBinder`)와 sqlite3 재현으로 ID 재사용과 인덱스 컬럼 이름 해석을 확인했다.
+- 실행: JDK 17·21 `./gradlew clean build` 14건 통과. 변이 3개(소유자 조건 제거·삭제 상태 코드·Result 필드 뒤바꿈)를 넣으면 해당 테스트가 실패함을 확인하고 원복했다. `bootRun` + curl로 스키마·흐름·오류 응답·소유권·동시 요청 120건·로그를 확인했다.
+- 독립 리뷰(`step-reviewer`): 높음·중간 지적 없음, 낮음 3건(문서 서술·상태 갱신·커밋 전 확인).
+
+**⑤ 오류·개선점**
+- AI 누락 정정(사용자 지적): CLAUDE.md를 압축할 때 초안 §5.7 "SOLID 원칙을 고려한다"를 빠뜨렸다 → 원칙 6에 복원했다. 웹 어댑터가 도메인을 직접 응답으로 바꾸던 설계도 지적에 따라 Result를 거치게 바꿨다.
+- 변이 확인에서 소유자 조건을 지워도 필수 테스트 4종은 통과했다 → TEST-X2를 앞당긴 판단을 실행으로 뒷받침했다.
+- 리뷰 지적: 오류 응답 기록에서 `errors`가 붙지 않는 400(읽을 수 없는 본문)을 검증 실패와 함께 적었다 → 응답 본문을 다시 받아 정정했다. 스모크 출력의 한 줄 중복은 단독 재요청으로 확인했다.
+
+**⑥ 반영** — todo 기능과 TEST-02·04·X2, user 기능 리팩터링(D-20), `GlobalExceptionHandler` 404 매핑, CLAUDE.md 원칙 6, rules 6개·SKILL·결정(D-08·10·14·15·17 보완, D-20 추가)·체크리스트·진행 문서.

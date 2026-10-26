@@ -2,9 +2,10 @@
 
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
-## 현재 상태 — 2026-10-25
-- **단계: 6단계(User·Auth) 완료 → 7단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
-- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(9건 — contextLoads·TEST-01·TEST-03, S9). `bootRun`에서 가입·로그인·내 정보·오류 응답 확인(S9).
+## 현재 상태 — 2026-10-26
+- **단계: 7단계(Todo) 완료 → 8단계 대기.** 설계 승인은 2026-10-25(used_prompts #2). 다음 단계는 사용자 확인 후 진행한다(CLAUDE.md 단계 게이트).
+- 빌드·테스트: Gradle 9.8.2 + Boot 3.5.16, JDK 17·21 모두 `clean build` 통과(14건 — contextLoads·TEST-01·02·03(7)·04(3)·X2, S10). `bootRun`에서 TODO 흐름·오류·소유권·동시 요청 확인(S10).
+- 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
 - 지침·기록(S7): 압축 뒤 CLAUDE.md 전체 주입 확인. 로컬 훅 3개 — 프롬프트 원문 백업(하네스 메시지 제외), 지침 로드 기록, 커밋·푸시 검사(작성자·테스트·강제 푸시).
 
@@ -15,10 +16,10 @@
 4. [x] 설정과 테스트 베이스 — `application.yaml`(SQLite·JPA), `application-test.yaml`, `IntegrationTestSupport` (검증: S6). `auth.*`는 사용하는 코드와 함께 5단계로 조정
 5. [x] 보안 골격: `auth.jwt-secret`·SecurityConfig·서명 키와 JWT 디코더(임의 키 대체)·공개 인증 경로용 `BearerTokenResolver`·EntryPoint·GlobalExceptionHandler → TEST-03 — SEC-02·04·07·08·12, ERR-01 (검증: S8)
 6. [x] User·Auth 필수 범위: `JwtEncoder`(HS256 헤더 명시)·`TokenIssuer`·비밀번호 해시 어댑터·`@CurrentUserId`, 가입·내 정보·로그인(**`access_token`만 발급**) → TEST-01 — API-01~03, SEC-01·03·06 (검증: S9)
-7. [ ] Todo 기능 → TEST-02·04, 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인 — API-04~09, ERR-02·03, DB-02·03
+7. [x] Todo 기능 → TEST-02·04(GET·PUT·DELETE) + TEST-X2(본인 TODO만 — 명세 필수 동작이라 S10에 10단계에서 앞당김), 클린 상태 `bootRun`으로 `users`·`todos` `.schema` 중간 확인, 동시 요청으로 커넥션 풀 1개 동작 확인(R-3) — API-04~09, ERR-02·03, DB-02·03. 사용자 지시로 Result → Response 변환·네이밍 정리(D-20)를 user 기능까지 적용 (검증: S10)
 8. [ ] 재발급 확장: 로그인 응답에 `refresh_token` 추가, `refresh_tokens`, `POST /users/refresh`(회전·재사용 탐지, 공개 엔드포인트 매처에 추가) → TEST-07·08 + **TEST-01~04 회귀**, `refresh_tokens` `.schema` 확인 — API-11, SEC-11, DB-06
 9. [ ] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10
-10. [ ] 선택 테스트 TEST-X1~X4, 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
+10. [ ] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04
 11. [ ] 선택 기능 OPT-01~03 결정(구현하면 테스트 포함) — D-14
 12. [ ] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령, SQL 명령 없음), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18
 13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08
@@ -30,6 +31,20 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-25 · S10 명세 재대조, 7단계 TODO 기능(TEST-02·04·X2), 계층 DTO·네이밍 정리(D-20)
+- 명세 재대조: Notion 원문을 다시 받아 로컬 사본과 비교 — 블록 76개 동일, 최종 수정 2026-09-30. 누락·오류 없음. 보강 7건: TEST-X2를 7단계로(API-09는 명세 필수 동작), TEST-04를 GET·PUT·DELETE로, SQLite ID 재사용 문서화(R-7), R-3 실측, 8단계 재사용 탐지 롤백 함정(`noRollbackFor`, D-15), ZIP `gradlew` 실행 권한·`settings.gradle` 확인(R-8, SKILL), OPT-03 판단 항목(D-14)
+- 사용자 추가 지시(작업 중): Result → Response 변환(웹 ↔ 도메인 결합 제거, SOLID), 참고 프로젝트 네이밍 → D-20. user 기능도 같은 방식으로 정리하고, CLAUDE.md를 압축할 때 빠진 초안 §5.7 "SOLID"를 원칙 6에 복원. 참고 프로젝트와 다른 점 2가지(Request/Response는 package-private 유지를 위해 `web`, JPA 엔티티는 `JpaEntity`)
+- 구현: todo 기능(도메인 `Todo`, `TodoUseCase`·`TodoService`, `CreateTodoCommand`·`UpdateTodoCommand`·`TodoResult`, `TodoCommandPort`·`TodoQueryPort`, `TodoController`·Request 2개·`TodoResponse`, `TodoJpaEntity`·`TodoRepository`·`TodoRepositoryAdapter`), `TodoNotFoundException` 404 매핑, user 기능 리팩터링(`SignupCommand`·`LoginCommand`·`UserResult`·`TokenResult`, `UserCommandPort`·`UserQueryPort`·`PasswordHashPort`·`AccessTokenPort`, `UserRepositoryAdapter`·`PasswordHashAdapter`·`AccessTokenAdapter`), 테스트 `TodoCrudFlowTest`(TEST-02)·`TodoNotFoundTest`(TEST-04)·`TodoOwnershipTest`(TEST-X2)·`IntegrationTestSupport.signupAndLogin()`
+- 실행 명령과 결과:
+  - JDK 17 `./gradlew test` → 14건 통과(첫 실행), 리팩터링 뒤 14건 통과. 정적 점검: web 어댑터의 domain import 0건, application의 웹·JPA·Security import 0건, 도메인 순수성 0건
+  - 변이 확인(되돌린 뒤 `cmp`로 원본과 일치 확인): 소유자 조건 제거 → TEST-X2만 실패(필수 4종은 통과 — X2를 앞당긴 근거), 삭제 204→200 → TEST-02 실패, Result 변환에서 제목·설명 뒤바꿈 → TEST-02·X2 실패
+  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=14 failures=0, `todo.db` 없음
+  - bootRun + curl(JDK 17, `todo.db` 없는 상태에서 시작): 스키마 `todos(id integer, completed boolean not null, description varchar(1000), title varchar(100) not null, user_id bigint not null, primary key (id))` + `CREATE INDEX idx_todos_user_id on todos (user_id)`, `users(username varchar(50) not null unique)`. 흐름 201 + `Location: /todos/1` → 목록 200 → 단건 200 → 수정 200 → 삭제 204(본문 0바이트) → 단건 404 ProblemDetail·목록 `[]`. 오류: 빈 제목·101자 제목·1,001자 설명·PUT `completed` 누락 → 400(`errors`), `completed` 문자열·본문 없음·깨진 JSON → 400(`errors` 없음, 프레임워크 기본 detail "Failed to read request"), `text/plain` 415·PATCH 405(둘 다 `application/problem+json`), 숫자 아닌 ID 400, 토큰 없음 401. 소유권: 타인 GET·PUT·DELETE 404, 타인 목록에 없음, 본문에 A의 `userId`를 넣은 B의 요청은 B 소유로 저장(sqlite3로 `user_id` 확인). ID 재사용 재현(A가 지운 4를 B의 새 TODO가 받음, A가 조회하면 404). 동시 요청(TODO API 기준) POST 60건·GET 60건(병렬 30) 모두 성공, 행 +60, 오류 로그 없음 → R-3 해소. `/v3/api-docs`에 `@CurrentUserId` 미노출. 로그에 토큰·비밀번호 0건
+  - 독립 리뷰(`step-reviewer`): 높음·중간 지적 없음. TODO 기능·TEST-02·04·X2·D-20 리팩터링이 명세·`api.md`·rules와 일치, D-20의 참고 프로젝트와 다른 점 2가지는 타당하다고 판단. 테스트 재실행 14건 통과. 낮음 지적 반영: ① 400 서술 정정(위 문구 — 응답 본문을 다시 받아 `step7-recheck2.txt`로 저장), ② SEC-08·D-10 상태 갱신, ③ 8단계 함정 문구 보완(예외가 다른 `@Transactional` 경계를 거치면 rollback-only로 500, `REQUIRES_NEW`는 무한 정지가 아니라 connectionTimeout 30초 뒤 실패·풀을 늘려도 SQLite 잠금으로 실패). 관찰: 가입·로그인은 bcrypt를 트랜잭션 안에서 실행해 커넥션 1개를 쥐므로 로그인이 몰리면 다른 요청이 기다린다(채점 영향 없음, D-10)
+  - 지침 로드 기록: 이번 압축 직후 `compact` 이유로 CLAUDE.md 5,753자·해시 `6a1435fe2e14` 기록 = 커밋본과 일치(D-17·DOC-08)
+- 실수·정정: 스모크 출력에서 한 줄(설명 1,001자)이 두 번 찍혔다 → 같은 요청을 단독으로 다시 보내 응답 1건(400, `description` 오류)·연결 1회를 확인
+- 다음: 사용자 확인 후 8단계
 
 ### 2026-10-25 · S9 6단계 설계 재검토와 User·Auth(TEST-01)
 - 설계 재검토(구현 전 보고): 로그인은 필수 여부만 검증(bcrypt 72바이트 예외는 인코딩에서만 — 6.5.11 소스), 검증 메시지 한국어 고정(로캘 의존 제거), `PasswordEncoder` 빈 없음(어댑터 내부), 어댑터 클래스 package-private, 사용자 없는 `/users/me` 404 — D-03·D-09·rules 반영

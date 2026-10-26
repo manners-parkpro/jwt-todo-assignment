@@ -21,7 +21,8 @@ paths:
 ## SQLite DDL 함정 (Hibernate 6.6.53 소스로 확인)
 - **FK 제약은 생성되지 않는다**(`hasAlterTable()=false`라 FK DDL을 생략). `@ManyToOne`으로 무결성을 기대하지 말고 사용자 ID 컬럼(`user_id`, Long) + `@Index`로 두며, 무결성은 애플리케이션에서 보장한다.
 - **유니크는 `@Column(unique = true)`로만 건다** — CREATE TABLE에 인라인으로 들어간다. `@Table(uniqueConstraints = ...)`는 ALTER가 필요해 SQLite에서 생략된다.
-- PK: `@GeneratedValue(strategy = GenerationType.IDENTITY)`.
+- PK: `@GeneratedValue(strategy = GenerationType.IDENTITY)`. SQLite 방언은 이를 AUTOINCREMENT 없는 `integer` PK(rowid 별칭)로 만든다(`SQLiteIdentityColumnSupport`) → **마지막 행을 지우면 그 ID가 다음 행에 다시 쓰인다**(다른 사용자의 새 TODO일 수도 있다 — sqlite3로 재현). 소유권 조건(`id` + `userId`)이 있어 타인 데이터는 드러나지 않으며, 코드·테스트는 삭제한 ID가 계속 비어 있다고 가정하지 않는다.
+- 인덱스는 `@Table(indexes = @Index(columnList = "userId"))`처럼 필드명으로 적는다 — Hibernate가 컬럼과 같은 명명 전략을 적용한다(`IndexBinder`). `CREATE INDEX`는 ALTER가 아니라 SQLite에서도 생성된다.
 - 컬럼 타입은 Long·String·boolean만 쓴다. 시각은 epoch 밀리초 Long으로 저장한다(SQLite 날짜 타입 회피). Enum이 필요해지면 저장→조회 왕복 테스트로 먼저 확인한다.
 
 ## 테이블
@@ -33,6 +34,7 @@ paths:
 
 ## JPA 엔티티·리포지토리
 - `adapter.out.persistence` 안에만 둔다. `protected` 기본 생성자, setter 없음, `from(domain)`/`toDomain()` 변환 메서드.
+- 이름(D-20): 엔티티 `<대상>JpaEntity`, Spring Data 인터페이스 `<대상>Repository`, 이를 주입해 `<대상>CommandPort`·`<대상>QueryPort`를 함께 구현하는 `<대상>RepositoryAdapter`.
 - 조회 메서드에는 소유자 조건을 넣는다: `findByIdAndUserId`, `findAllByUserIdOrderByIdAsc`. 사용자 ID 필드는 두 테이블 모두 `userId`(컬럼 `user_id`)로 쓰며, Boot 기본 명명 전략이 바꿔 주므로 `@Column(name)`을 붙이지 않는다. 사용자는 `findByUsername`, `existsByUsername`. 리프레시 토큰은 `findByTokenHash`, `deleteAllByUserId`, `deleteAllByUserIdAndExpiresAtLessThan`.
 - 네이티브 쿼리(`@NativeQuery`, `nativeQuery = true`)와 요청값으로 만든 `Sort`·`Pageable`은 쓰지 않는다. 정렬은 메서드 이름에 고정한다(CVE-2026-47834 전제 회피).
 

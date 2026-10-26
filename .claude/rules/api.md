@@ -37,6 +37,6 @@ paths:
 
 ## 구현 규칙
 - 구현 순서: 필수 흐름(로그인 응답 = `access_token`)을 먼저 완성하고, `refresh_token` 필드와 `POST /users/refresh`는 재발급 확장 단계에서 추가한다. 필수 테스트가 확장에 의존하지 않게 하기 위해서다(D-15).
-- 컨트롤러는 요청 DTO `@Valid` 검증 → In Port 호출 → Response DTO 변환만 한다. 비즈니스 로직·리포지토리 접근 금지.
+- 컨트롤러는 요청 DTO `@Valid` 검증 → `toCommand(...)` → In Port 호출 → 돌려받은 Result를 `Response.from(result)`로 변환만 한다(도메인 참조 금지 — D-20). 비즈니스 로직·리포지토리 접근 금지.
 - 예외 → ProblemDetail 변환은 `GlobalExceptionHandler`(`ResponseEntityExceptionHandler` 상속) 한 곳에서 한다.
 - README의 API 목록은 이 표와 일치시킨다.

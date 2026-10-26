@@ -9,14 +9,14 @@
 |---|---|---|
 | D-01 | 빌드 기준선: Boot 3.5.16 · Gradle 9.8.2 · Java 17 타깃 · Tomcat 10.1.61 | 확정 |
 | D-02 | Lombok·springdoc 유지와 사용 범위 | 확정 |
-| D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정 |
+| D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정(포트 이름·Command 범위·반환 타입은 → D-20) |
 | D-04 | 도메인 모델·JPA 엔티티 분리, 집합체 간 ID 참조 | 확정 |
 | D-05 | 액세스 토큰: OAuth2 Resource Server(Nimbus) + HS256, clock skew 0 | 확정 |
 | D-06 | 서명 키(미설정 시 임의 키)·액세스 토큰 수명 1시간 | 확정 |
 | D-07 | 응답 규약: 토큰 응답 필드 명시 · ProblemDetail · 상태 코드 | 확정 |
 | D-08 | 소유권 검사와 존재 은닉(타인 TODO 404) | 확정 |
 | D-09 | 비밀번호·로그인 정책(BCrypt 72바이트 제한 대응) | 확정 |
-| D-10 | SQLite 영속성: 테이블 생성 경로 단일화, DDL 함정 대응, 커넥션 풀 1 | 확정(실측 조건) |
+| D-10 | SQLite 영속성: 테이블 생성 경로 단일화, DDL 함정 대응, 커넥션 풀 1 | 확정(S10 실측) |
 | D-11 | 테스트 전략: 통합 테스트 + 실제 로그인 토큰 | 확정 |
 | D-12 | 요청·응답 필드 | 확정 |
 | D-13 | 작업 관리 체계, 단계 게이트, 공개 저장소 운영 | 확정 |
@@ -26,6 +26,7 @@
 | D-17 | 지침 로드 보장과 검증(CLAUDE.md 전체 주입 확인, 로드 기록 훅) | 확정 |
 | D-18 | README의 Windows 명령 범위 | 확정 |
 | D-19 | 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 | 확정 |
+| D-20 | 계층 간 DTO(Command·Result)와 네이밍 규칙(참고 프로젝트) | 확정 |
 
 ---
 
@@ -47,7 +48,7 @@
 - **대안**: springdoc 제거(YAGNI 관점의 권장안이었음).
 
 ### D-03 기능별 헥사고날 + 경량 DDD — 확정
-- **결정**: `user`, `todo` 패키지마다 `domain` / `application`(`port.in`, `port.out`, `service`) / `adapter`(`in.web`, `out.persistence`, `out.security`), 공통은 `global`(`security`, `error`, `config`). In Port는 책임별 인터페이스(`UserUseCase` 가입·내 정보, `AuthUseCase` 로그인·재발급, `TodoUseCase`), Out Port는 `UserRepository`·`TodoRepository`·`RefreshTokenRepository`·`PasswordHasher`·`TokenIssuer`. Command record는 파라미터가 많은 유스케이스에만 쓴다.
+- **결정**: `user`, `todo` 패키지마다 `domain` / `application`(`port.in`, `port.out`, `service`) / `adapter`(`in.web`, `out.persistence`, `out.security`), 공통은 `global`(`security`, `error`, `config`). In Port는 책임별 인터페이스(`UserUseCase` 가입·내 정보, `AuthUseCase` 로그인·재발급, `TodoUseCase`), Out Port는 `UserRepository`·`TodoRepository`·`RefreshTokenRepository`·`PasswordHasher`·`TokenIssuer`. Command record는 파라미터가 많은 유스케이스에만 쓴다. (포트 이름·Command 범위·반환 타입은 대체됨 → D-20)
 - **근거**: 초안 §5 "저장소 및 외부 기능은 Port를 통해 접근", "도메인은 기술 세부사항에 직접 의존하지 않는다". 평가 기준 "코드를 읽기 쉬운가"와 초안의 "의미 없는 인터페이스 금지"에 따라 유스케이스별 인터페이스(9개) 대신 책임별 3개로 묶었다. 재발급 확장(D-15)으로 인증 책임이 커져 `AuthUseCase`를 계정 관리(`UserUseCase`)와 나눴다. 리프레시 토큰 생성·해시는 JDK 표준 API로 충분해 포트를 만들지 않는다.
 - **보완(S7)**: application 서비스의 설정값(예: 리프레시 토큰 수명)은 생성자 파라미터 `@Value`로 받는다(application에 허용하는 유일한 추가 Spring 어노테이션). 기능 예외는 각 기능의 `application`에 두고 `global.error.GlobalExceptionHandler`가 직접 참조한다(global → 기능 예외 의존만 허용). 독립 리뷰가 5~8단계에서 의존 규칙을 어기게 될 공백으로 지적했다. 어댑터 패키지의 클래스는 package-private으로 둬서 JPA 엔티티·DTO가 포트 밖으로 새는 것을 컴파일러가 막게 한다(S9 — Spring Data·Hibernate·Jackson·검증기가 package-private 클래스에서 동작함을 테스트로 확인).
 - **대안**: 유스케이스별 In Port(정석이지만 파일 증가) · In Port 생략(헥사고날 표현 약화).
@@ -76,16 +77,20 @@
 - **결정**: 단건 조회·수정·삭제는 `id + userId` 조건으로 조회하고, 미존재·타인 소유 모두 404로 응답한다.
 - **근거**: 명세 "로그인한 사용자 본인의 TODO만 다룹니다". RFC 9110 §15.5.4: 대상의 존재를 숨기려는 서버는 403 대신 404로 응답할 수 있다. IDOR 방지.
 - **대안**: 403 — 다른 사용자의 리소스가 존재한다는 사실이 드러난다.
+- **보완(S10)**: SQLite PK는 AUTOINCREMENT가 없어 삭제된 마지막 ID가 다른 사용자의 새 TODO에 다시 쓰일 수 있다(Hibernate `SQLiteIdentityColumnSupport`, sqlite3 재현). `id + userId` 조건이 이때도 타인 데이터를 막는다. 이 동작은 명세의 필수 요구("본인의 TODO만")라 검증(TEST-X2)을 10단계에서 7단계로 앞당겼다.
 
 ### D-09 비밀번호·로그인 정책 — 확정
 - **결정**: `DelegatingPasswordEncoder`(bcrypt). 비밀번호 8~64자 + UTF-8 72바이트 이하, username 중복은 409, 로그인 실패는 하나의 401 메시지.
 - **근거**: Spring Security 6.5.11 `BCrypt.java:615-616`이 72바이트 초과 시 `IllegalArgumentException("password cannot be more than 72 bytes")`을 던진다 → 검증하지 않으면 500(CVE-2025-22228 대응 이후 동작). 회원가입 409가 이미 계정 존재를 드러내므로 로그인 응답 시간 균등화(더미 해시 비교)는 하지 않는다(YAGNI). 메시지 통일은 비용이 없어 유지한다.
 - **보완(S9)**: 72바이트 예외는 인코딩(`for_check=false`)에서만 나고 비교는 예외 없이 동작하므로(6.5.11 소스), 로그인 요청은 필수 여부만 검사하고 가입 규칙(길이)은 적용하지 않는다 — 틀린 값은 401. 검증 메시지는 어노테이션에 고정한 한국어다(기본 메시지는 요청 로캘·JVM 로캘에 따라 달라 채점 환경마다 응답이 바뀐다). `PasswordEncoder`는 빈으로 등록하지 않고 해시 어댑터 안에서만 만든다(사용처가 하나).
 
-### D-10 SQLite 영속성 — 확정(실측 조건)
+### D-10 SQLite 영속성 — 확정(S10 실측)
 - **결정**: 테이블 생성 경로는 README 명령(`./gradlew bootRun`, `./gradlew test`)이 일으키는 Hibernate `ddl-auto` 하나다(앱 `update`, 테스트 `create-drop`). 수동 SQL·`schema.sql`·`data.sql`·마이그레이션 명령·미리 만든 DB 파일과 README의 SQL 명령을 금지한다(사용자 요청 2026-10-25). dialect 명시, `open-in-view: false`, Hikari `maximum-pool-size: 1`, DB 파일은 앱 `./todo.db`·테스트 `build/todo-test.db`. FK 대신 사용자 ID 컬럼(`todos.user_id`, `refresh_tokens.user_id`) 인덱스 + 애플리케이션 무결성, 유니크는 `@Column(unique = true)`. 사용자 ID 필드는 두 테이블 모두 `userId`다(S8 사용자 검토 — S7에 컬럼을 `owner_id`로 바꿨던 것을 되돌림: Boot 기본 명명 전략(`CamelCaseToUnderscoresNamingStrategy`, 3.5.16 jar 확인)이 두 이름 모두 어노테이션 없이 바꿔 주므로 매핑 이점은 같고, 관례·명세 용어("사용자 본인의 TODO")·JWT `sub`부터 저장소까지 같은 이름·`refresh_tokens`와의 일관성에서 `userId`가 낫다. `ownerId`의 이점은 사용자 관계가 여럿일 때의 구분인데 범위 밖이다). 컬럼 타입은 Long·String·boolean이고 시각은 epoch 밀리초 Long. 네이티브 쿼리·요청 Sort는 쓰지 않는다.
 - **근거**: 명세 "README에 적힌 명령어만으로 테이블이 생성되어야 합니다. (지원자가 SQL을 직접 실행해야 하는 방식은 안 됩니다)". 생성 경로를 하나로 두면 채점 환경에서 결과가 결정적이다. Boot 3.5.16 BOM — sqlite-jdbc 3.49.1.0, hibernate-community-dialects = Hibernate 6.6.53.Final. 소스로 확인 — SQLiteDialect `hasAlterTable()=false` → `StandardForeignKeyExporter`가 FK DDL을 만들지 않는다. SQLite용 유니크 처리는 컬럼 정의에 `unique`를 인라인으로 붙이고, ALTER가 필요한 테이블 단위 유니크 제약은 생략한다. `busy_timeout` 기본 3000ms, SQLite는 동시 writer 1개.
 - **위험**: 풀 1개에서 연결 대기 타임아웃이 생기면 기본 풀 + busy_timeout 방식으로 재검토한다.
+- **실측(S10)**: `bootRun`에서 TODO API 병렬 요청 120건(POST 60·GET 60, 동시 30)이 모두 성공했고 타임아웃·`SQLITE_BUSY`가 없었다 → 실측 조건 해소. 풀 1개라 트랜잭션이 커넥션 순서대로 처리돼 "중복 확인 → 저장" 사이의 경쟁도 생기지 않는다.
+  - 한 트랜잭션 안에서 두 번째 커넥션을 요구하는 코드(`REQUIRES_NEW`)는 쓰지 않는다. 바깥 트랜잭션이 커넥션을 쥔 채 기다리다 Hikari `connectionTimeout`(30초) 뒤 예외로 실패하고, 풀을 늘려도 바깥 트랜잭션의 SQLite 잠금 때문에 안쪽 커밋이 `SQLITE_BUSY`로 실패한다(D-15 보완, S10 리뷰).
+  - 관찰(S10 리뷰): 가입·로그인은 bcrypt 계산을 트랜잭션 안에서 해 그동안 커넥션 1개를 쥔다 → 로그인이 몰리면 다른 요청이 기다린다. 채점 시나리오에는 영향이 없어 바꾸지 않는다.
 
 ### D-11 테스트 전략 — 확정
 - **결정**: `@SpringBootTest` + MockMvc + `test` 프로파일. 보안 필터를 포함하고 실제 `/users/login` 토큰을 쓴다. 고유 username으로 격리한다. `spring-security-test`는 넣지 않는다.
@@ -109,6 +114,7 @@
 ### D-14 선택 사항(가산점) 처리 — 확정
 - **결정**: OPT-01~03(검색, 회원 수정·탈퇴)은 필수 테스트 TEST-01~04, 확장 테스트 TEST-07·08, 선택 테스트 TEST-X를 마친 뒤(10단계 이후) 범위와 위험을 다시 판단해 결정한다(11단계). README는 그 결정 뒤 최종 API 기준으로 작성·실검증한다(12단계 — S7에서 README와 순서를 바꿨다). 추가 테스트(TEST-X)는 필수 4종 완료 후 작성한다.
 - **근거**: 명세 "안 해도 감점 없음", 평가 1순위는 요구사항대로 동작하는가, YAGNI. README를 먼저 쓰면 선택 기능을 넣을 때 API 목록과 실행 검증을 다시 해야 한다(독립 리뷰 지적). 회원 수정(비밀번호 변경)과 탈퇴는 리프레시 토큰 폐기와 TODO 정리(FK 없음) 같은 추가 결정이 필요하다.
+- **판단 항목(S10)**: 탈퇴(OPT-03)를 고르면 액세스 토큰은 만료(1시간) 전까지 유효해 탈퇴 뒤에도 TODO API를 호출할 수 있다 — FK가 없어 주인 없는 행이 생긴다. 기능 간 직접 참조 금지(`architecture.md`)와 함께 판단한다.
 
 ### D-15 토큰 재발급(Refresh Token) 확장과 필수 테스트 보호 — 확정
 - **결정**:
@@ -121,6 +127,7 @@
 - **근거**: 사용자 요청 "토큰이 만료되었을 때 재요청 시 다시 발급하여 API 호출이 가능하도록". 리프레시 토큰을 JWT가 아닌 DB 저장 불투명 토큰으로 두면 서명 키와 무관해서, 임의 키 대체(D-06)로 재시작한 뒤에도 재발급된다. RFC 9700 §2.2.2: 공개 클라이언트의 리프레시 토큰은 sender-constrained이거나 회전을 써야 한다(MUST). §4.14.2: 회전 시 이전 토큰은 무효화하되 관계를 보관하고, 무효화된 토큰이 제출되면 침해로 보고 활성 토큰을 폐기한다. 해시만 저장하면 DB가 유출돼도 토큰을 쓸 수 없다. 리소스 서버는 permitAll 경로에서도 Bearer 헤더를 검증하므로, 공개 인증 경로에서 헤더를 무시해야 만료 토큰을 단 클라이언트가 재발급을 받을 수 있다. 명세는 Refresh Token을 "구현하지 않아도 된다"고만 하므로 구현해도 충돌하지 않고, `access_token` 필드는 그대로다.
 - **대안**: HttpOnly 쿠키 전달(명세 응답과 정확히 일치하지만 curl·테스트에 쿠키 처리 필요) · JWT 리프레시 토큰(서명 키에 묶여 재시작 시 무효, 폐기 불가) · 재로그인만 허용(확장 요구 미충족) · 토큰 계열(family) 단위 폐기(더 정밀하지만 컬럼·로직 추가 — 사용자 단위 폐기로 단순화, 대신 재사용 탐지 시 그 사용자의 다른 기기도 다시 로그인해야 함).
 - **범위 밖(YAGNI)**: 로그아웃 엔드포인트, 리프레시 토큰 sender-constraint(DPoP·mTLS), 재발급 요청 속도 제한.
+- **보완(S10)**: 재사용 탐지로 폐기한 뒤 401 예외를 던지면 Spring 기본 롤백 규칙(RuntimeException)으로 폐기가 취소된다 → 재발급 메서드는 `@Transactional(noRollbackFor = …)`로 폐기를 커밋하고, 예외는 그 메서드 안에서 직접 던진다. 같은 트랜잭션에 참여하는 다른 `@Transactional` 경계를 거쳐 나오면 그 경계가 트랜잭션을 rollback-only로 표시해 커밋 때 `UnexpectedRollbackException`(500)이 난다(S10 리뷰). `REQUIRES_NEW`로 분리하지 않는다(D-10 — 30초 대기 뒤 실패). TEST-08("재사용 뒤 최신 토큰도 401")로 검증한다.
 
 ### D-16 프롬프트 기록 보존 — 확정
 - **결정**:
@@ -145,7 +152,7 @@
   - 압축 뒤 트랜스크립트에 주입된 CLAUDE.md 본문(4,820자)과 디스크 파일을 비교 — 차이는 유지보수용 HTML 주석 3줄과 끝 줄바꿈뿐(설계대로 제거됨). 독립 리뷰 서브에이전트도 본문 전체가 로드됐음을 확인했다.
   - 압축 뒤 `docs/` 파일을 읽자 `docs.md`가 다시 로드됐다. rules 파일을 Read 도구로 직접 읽은 뒤에는 같은 규칙이 다시 주입되지 않았다(이미 컨텍스트에 있음). 새 컨텍스트 서브에이전트에서는 `build.gradle`·Java 파일을 읽자 `build.md`·`architecture.md`·`security.md`가 로드됐고, 훅이 세 건을 `path_glob_match`로 기록했다(해시가 디스크 파일과 일치).
   - 이 세션에서 세션 중에 만든 CLAUDE.md·rules는 압축 전까지 한 번도 주입되지 않았다(트랜스크립트) → 지침 파일을 새로 만들거나 크게 고치면 다음 압축·새 세션 전까지는 반영을 가정하지 않는다.
-- **미확인**: `session_start`·`compact` 이유의 훅 기록은 다음 새 세션·압축 때 확인한다.
+- **확인(S10)**: 압축 직후 훅이 `compact` 이유로 CLAUDE.md 5,753자·해시 `6a1435fe2e14`를 기록했고, 커밋본과 글자 수·해시가 같다. **미확인**: `session_start` 이유의 기록은 다음 새 세션에서 확인한다.
 - **대안**: SessionStart 훅으로 CLAUDE.md 재출력(중복 주입) · 훅 없이 `/context`만 사용(사용자 화면에서만 확인되고 기록이 남지 않음).
 
 ### D-18 README의 Windows 명령 범위 — 확정
@@ -161,3 +168,13 @@
 - **검증(S7)**: 파이프 테스트 15건 — 허용(일반 명령, 강제가 아닌 푸시, 실제 테스트를 실행한 커밋 10초) / 거부(`--author`·`-c user.email`·환경 변수 덮어쓰기, `--force`·`--force-with-lease`·`+ref`, noreply가 아닌 설정·커밋, 실패하는 테스트). 설정 뒤 무해한 `echo`로 실제 거부를 확인했다. `step-reviewer`는 세션 중에 만들어 5단계에서 처음 사용한다(미실행).
 - **한계**: 사용자가 `!`로 직접 실행하는 명령과 Claude Code 밖의 git에는 적용되지 않는다. 명령 문자열을 검사하므로 `echo` 안의 같은 문자열도 막는다(안전한 쪽 오탐). 훅 자체가 실패하면(종료 1) 막지 않고 경고만 남긴다.
 - **대안**: Stop 훅으로 매 턴 테스트(문서만 바꾼 턴에도 실행되고 사용자 확인 단계와 충돌) · 지침만 유지(권고라 누락 가능).
+
+### D-20 계층 간 DTO(Command·Result)와 네이밍 규칙 — 확정
+- **결정**(사용자 지시 2026-10-25, S10):
+  - 유스케이스는 도메인 객체 대신 Result record(`UserResult`·`TokenResult`·`TodoResult`, `application/dto`)를 반환하고, 웹 어댑터는 `Response.from(result)`로 변환한다. 웹 어댑터는 도메인을 참조하지 않는다.
+  - 요청 본문이 있는 쓰기 유스케이스는 Request의 `toCommand(...)`로 만든 Command(`SignupCommand`·`LoginCommand`·`CreateTodoCommand`·`UpdateTodoCommand`)를 받는다. 경로·인증 값만 쓰는 조회·삭제는 값을 직접 받는다.
+  - 네이밍은 사용자가 지정한 참고 프로젝트(비공개 — 이름·경로는 공개 기록에 남기지 않는다)의 규칙을 따른다. Out Port는 영속화 `<대상>CommandPort`·`<대상>QueryPort`, 그 외 `<대상>Port`(`PasswordHashPort`·`AccessTokenPort`). 어댑터는 Spring Data `<대상>Repository`를 주입하는 `<대상>RepositoryAdapter`, 그 외 `<대상>Adapter`(`PasswordHashAdapter`·`AccessTokenAdapter`). 여러 줄 인스턴스화는 인자를 한 줄에 하나씩 쓴다.
+  - 참고 프로젝트와 다른 점: Request/Response는 `adapter/in/dto`로 나누지 않고 `adapter/in/web`에 둔다(나누면 public이 돼 package-private 경계(D-03)가 깨진다). JPA 엔티티는 도메인과 분리돼 있어(D-04) `<대상>JpaEntity`로 구분한다.
+- **근거**: 사용자 지적 — Response가 도메인을 직접 변환하면 웹 표현이 도메인 모델에 묶여(도메인 필드 변경이 API 응답까지 번진다) 결합도가 높고, 초안 §5.7 "SOLID 원칙을 고려한다"에 어긋난다. 이 원칙은 CLAUDE.md를 압축할 때 빠져 있었다 → 작업 원칙 6에 복원했다. Result를 두면 웹은 application의 출력 계약에만 의존하고(DIP), 도메인 변경과 응답 변경의 이유가 나뉜다(SRP). 영속화 포트를 읽기·쓰기로 나누면 서비스가 쓰는 연산에만 의존한다(ISP).
+- **비용**: record 6개·포트 2개 증가(user·todo). API 동작은 같고 HTTP 통합 테스트로 회귀를 확인한다.
+- **대안**: 도메인 반환 유지(파일은 적지만 웹 ↔ 도메인 결합) · Request/Response까지 참고 구조대로 분리(package-private 경계 포기).

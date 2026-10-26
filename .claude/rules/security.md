@@ -27,10 +27,11 @@ paths:
 - 저장: SHA-256 해시만 `refresh_tokens`에 저장한다. 원문은 응답으로 한 번만 내보내고 저장·로그하지 않는다. 만료는 `auth.refresh-token-ttl`(7d).
 - 회전: 재발급할 때마다 사용한 토큰을 `used`로 표시하고 새 액세스 토큰과 새 리프레시 토큰을 함께 발급한다.
 - 재사용 탐지: 이미 사용한 토큰이 다시 오면 그 사용자의 리프레시 토큰을 모두 폐기하고 401로 응답한다(RFC 9700 §4.14.2).
+  - 폐기한 뒤 401 예외를 던지면 기본 롤백 규칙(RuntimeException)에 따라 폐기가 취소된다 → 재발급 메서드는 `@Transactional(noRollbackFor = <재발급 실패 예외>)`로 폐기를 커밋하고, 예외는 그 메서드 안에서 직접 던진다(같은 트랜잭션의 다른 `@Transactional` 경계를 거쳐 나오면 rollback-only가 돼 커밋 때 500). `REQUIRES_NEW`로 분리하지 않는다 — 커넥션 풀이 1개라 30초(connectionTimeout) 대기 뒤 실패하고, 풀을 늘려도 SQLite 잠금으로 실패한다(D-10). TEST-08의 "재사용 뒤 최신 토큰도 401"이 이 동작을 검증한다.
 - 없는 토큰·만료·재사용은 구분하지 않고 같은 401·같은 메시지로 응답한다. 로그인할 때 그 사용자의 만료된 토큰 행을 정리한다.
 
 ## 비밀번호·로그인
-- `PasswordEncoderFactories.createDelegatingPasswordEncoder()`(기본 bcrypt)는 `PasswordHasher` 어댑터 안에서만 만들어 쓰고 빈으로 등록하지 않는다. 평문 저장 금지.
+- `PasswordEncoderFactories.createDelegatingPasswordEncoder()`(기본 bcrypt)는 `PasswordHashAdapter`(`PasswordHashPort` 구현) 안에서만 만들어 쓰고 빈으로 등록하지 않는다. 평문 저장 금지.
 - BCrypt는 인코딩할 때 72바이트를 넘는 비밀번호에 `IllegalArgumentException`을 던진다(비교는 예외 없이 앞 72바이트로 한다 — Spring Security 6.5.11 `BCrypt.hashpw`의 `for_check`) → 가입 요청 검증으로 8~64자 + UTF-8 72바이트 이하를 강제한다(미검증 시 500).
 - 로그인 실패는 "없는 사용자"와 "비밀번호 불일치"를 구분하지 않고 같은 401·같은 메시지로 응답한다.
 
