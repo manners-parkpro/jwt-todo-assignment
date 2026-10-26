@@ -64,7 +64,7 @@
 | DB-02 | SQLite에서 생성·조회·수정·삭제 실제 동작 | 초안 | persistence 어댑터 | TEST-02 | ✅ TEST-02, bootRun CRUD·동시 요청 120건(S10) |
 | DB-03 | 테이블·관계(FK 미생성 대응): `users`(username `unique`), `todos`(`user_id` 인덱스) — 7단계 | 초안·D-04·D-10 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ✅ `users`(username `varchar(50) not null unique`), `todos`(`user_id bigint not null` + `idx_todos_user_id`) 클린 bootRun `.schema`(S10) |
 | DB-04 | 개발 DB와 테스트 DB 분리 | 초안·D-10 | `todo.db` / `build/todo-test.db` | 테스트 후 `todo.db` 미변경 | ✅ 테스트는 `build/todo-test.db` 사용, 실행 후 `todo.db` 미생성(S6, JDK 17·21) |
-| DB-05 | `*.db` 커밋·제출 제외 | 명세 제출물 | `.gitignore`, ZIP | `git check-ignore`, `unzip -l` | 🟨 `.gitignore` 검증 완료(2026-10-25), ZIP 미검증 |
+| DB-05 | `*.db` 커밋·제출 제외 | 명세 제출물 | `.gitignore`, ZIP | `git check-ignore`, `unzip -l` | 🟨 `.gitignore` 검증 완료(2026-10-25), 시험 ZIP에서 루트·하위 폴더의 `*.db`·`*.db-journal`·`*.db-wal`과 `build/` 안 테스트 DB 제외 확인(S14). 최종 ZIP은 13단계 |
 | DB-06 | `refresh_tokens`(`token_hash` `unique`, `user_id` 인덱스) — 8단계(S7에 DB-03에서 분리) | 요청·D-15 | JPA 엔티티 | `sqlite3 todo.db '.schema'` | ✅ `CREATE TABLE refresh_tokens (id integer, expires_at bigint not null, token_hash varchar(64) not null unique, used boolean not null, user_id bigint not null, primary key (id))` + `idx_refresh_tokens_user_id` — 클린 bootRun `.schema`(S12) |
 
 ## 6. 테스트 (TEST)
@@ -98,22 +98,22 @@
 | DOC-03 | README: 테스트 실행 방법 `./gradlew test` | 명세 제출물 | `README.md` | 실행 확인 | ⬜ |
 | DOC-04 | README: API 목록 요약(+ Swagger UI 주소) | 명세 제출물·D-02 | `README.md` | `api.md`와 대조 | ⬜ |
 | DOC-05 | README: 인증 방법(로그인 → Bearer, 만료 1시간, `/users/refresh` 재발급) | 초안·요청 | `README.md` | 검토 | ⬜ |
-| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#11 완료, #12·#13 진행 중 — 압축 뒤 원문 대조로 누락 없음 확인(S7·S10·S13) |
+| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#13 기록(#13의 선택 기능 구현은 승인 대기) — 압축 뒤 원문 대조로 누락 없음 확인(S7·S10·S13), 시험 ZIP에 포함 확인(S14). 최종 내용은 13단계 |
 | DOC-07 | 프롬프트 원문 보존 — 받은 턴 안에 기록, 훅 자동 백업(로컬), 이전 프롬프트 백필 | 요청·D-16 | `.claude/hooks/log-prompt.py`, `.claude/prompt-history.jsonl` | 파이프 테스트, 다음 프롬프트 기록 확인 | ✅ 실제 프롬프트·작업 중 메시지가 `source: "hook"`으로 기록됨(S5), 압축 뒤 첫 프롬프트 기록·하네스 메시지 제외(S7) |
 | DOC-08 | 세션 시작·압축 후 CLAUDE.md 전체 로드 확인과 지침 로드 기록 | 요청·D-17 | `.claude/hooks/log-instructions.py`, `.claude/instructions-log.jsonl` | 트랜스크립트 주입본과 디스크 파일 비교, 훅 기록 | 🟨 CLAUDE.md 전체 주입·`path_glob_match` 기록(S7), 압축 직후 `compact` 기록 = 커밋본 5,753자·해시 일치(S10). `session_start`는 다음 새 세션에서 확인 |
 | SUB-01 | 파일명 `이름_springboot.zip`, 제출처 채용 사이트(사람인/잡코리아) | 명세 제출물 | — | 파일명 확인 | ⬜ |
-| SUB-02 | 제외: `build/`, `target/`, `.gradle/`, `*.db` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
-| SUB-03 | 포함: 소스 전체 — `src/`, `build.gradle`, `settings.gradle`, `README.md`, `prompts/used_prompts.md` | 명세 제출물 | ZIP | `unzip -l` | ⬜ |
-| SUB-04 | Wrapper(`gradlew`, `gradlew.bat`, `gradle/wrapper/*`) 포함·ZIP 안 `gradlew` 실행 권한 유지, `.claude/settings.local.json`·`.claude/*.jsonl`(로컬 기록)·`HELP.md` 제외 | 설계·D-13·D-16 | ZIP | `unzip -l`, `zipinfo`(gradlew `-rwxr-xr-x`) | 🟨 `HELP.md` 삭제 완료, `memory-bank/` 제외(S12 `.gitignore`·SKILL), 시험 ZIP에서 `gradlew` `-rwxr-xr-x` 유지·제외 목록 동작 확인(S12). 최종 ZIP은 13단계 |
-| SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `git ls-tree`, `unzip -l` | 🟨 원격 트리 제외 확인(S7, `origin/main`), ZIP 미검증 |
+| SUB-02 | 제외: `build/`, `target/`, `.gradle/`, `*.db` | 명세 제출물 | ZIP | `unzip -l` | 🟨 저장소 사본에 제외 대상을 실제로 둔 채 SKILL ZIP 명령 실행 — `build/`(파일 115개)·`.gradle/`(14개)·더미 `target/`·`*.db` 모두 빠짐, `.git/`·`.idea/`·`memory-bank/`·`*.jsonl`·`settings.local.json`도 빠짐(S14). 최종 ZIP은 13단계 |
+| SUB-03 | 포함: 소스 전체 — `src/`, `build.gradle`, `settings.gradle`, `README.md`, `prompts/used_prompts.md` | 명세 제출물 | ZIP | `unzip -l` | 🟨 시험 ZIP(S14)에 `src/main`·`src/test`·`build.gradle`·`settings.gradle`·Wrapper·`prompts/used_prompts.md`·명세 사본 포함, 로컬 절대 경로·회사 식별자 0건. **`README.md`는 아직 없음(12단계)** |
+| SUB-04 | Wrapper(`gradlew`, `gradlew.bat`, `gradle/wrapper/*`) 포함·ZIP 안 `gradlew` 실행 권한 유지, `.claude/settings.local.json`·`.claude/*.jsonl`(로컬 기록)·`HELP.md` 제외 | 설계·D-13·D-16 | ZIP | `unzip -l`, `zipinfo`(gradlew `-rwxr-xr-x`) | 🟨 `HELP.md` 삭제 완료, `memory-bank/` 제외(S12 `.gitignore`·SKILL), 시험 ZIP에서 `gradlew` `-rwxr-xr-x`가 ZIP 안과 압축 해제 뒤 모두 유지, 줄바꿈 `gradlew` LF·`gradlew.bat` CRLF(`.gitattributes`대로, S12·S14). 최종 ZIP은 13단계 |
+| SUB-05 | 공개 저장소에는 명세 사본 제외(`.gitignore`), 제출 ZIP에는 포함 | 요청·D-13 | `.gitignore`, ZIP | `git check-ignore`, `git ls-tree`, `unzip -l` | 🟨 원격 트리 제외 확인(S7, `origin/main`), 시험 ZIP에 `docs/assignment-spec.md` 포함 확인(S14). 최종 ZIP은 13단계 |
 | SUB-06 | 커밋 작성자 정보에 회사 도메인 없음(닉네임 + GitHub noreply) | 요청·D-13·D-19 | 저장소 로컬 git 설정, `guard-git.py` 훅 | `git log --format='%ae %ce'` | ✅ 원격 `main`의 모든 커밋 작성자·커미터가 noreply(S7), `manners-parkpro` 연결(S5, GitHub API). 커밋·푸시 훅이 강제(S7) |
 
 ## 8. 선택 사항 — 가산점 (OPT, 필수 완료 후 결정 — D-14)
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
-| OPT-01 | `GET /todos/search?keyword=` 제목으로 검색 | 명세 선택 사항 | — | — | ⏸ |
-| OPT-02 | `PUT /users/me` 회원정보 수정 (비밀번호 변경 시 리프레시 토큰 폐기 필요) | 명세 선택 사항 | — | — | ⏸ |
-| OPT-03 | `DELETE /users/me` 탈퇴 (TODO·리프레시 토큰 정리 필요) | 명세 선택 사항 | — | — | ⏸ |
+| OPT-01 | `GET /todos/search?keyword=` 제목으로 검색 — 본인 것만·id 오름차순·`%`/`_` 문자 그대로 | 명세 선택 사항·D-21 | todo(웹·유스케이스·조회 포트) | `[OPT-01]` 테스트, bootRun | 🟨 설계 완료(D-21, S14) — 구현은 사용자 승인 후 11단계 |
+| OPT-02 | `PUT /users/me` 회원정보 수정 — 현재 비밀번호 먼저 확인(틀리면 400), username 중복 409, 비밀번호 변경 시 리프레시 토큰 전부 폐기 | 명세 선택 사항·D-21 | user(웹·유스케이스·도메인) | `[OPT-02]` 테스트, bootRun | 🟨 설계 완료(D-21, S14) — 구현은 사용자 승인 후 11단계 |
+| OPT-03 | `DELETE /users/me` 탈퇴 — 행을 지우지 않고 `withdrawn` 표시(ID 재사용 방지), 같은 트랜잭션에서 리프레시 토큰·TODO 삭제(TODO는 `global.event` 이벤트) | 명세 선택 사항·D-21 | user·todo(이벤트)·`users.withdrawn` | `[OPT-03]` 테스트(새 가입자가 탈퇴자 ID를 받지 않음 포함), bootRun `.schema` | 🟨 설계 완료(D-21, S14) — 구현은 사용자 승인 후 11단계 |
 
 ## 9. 미해결·위험
 | ID | 내용 | 조치 |
@@ -130,5 +130,6 @@
 | R-10 | 도구가 프로젝트 루트에 `memory-bank/`(템플릿·파일 목록)를 다시 만들었다(S11, 09:22) — 커밋·ZIP에 섞일 수 있다 | 해결(S12, 사용자 결정): 폴더는 두고 `.gitignore`와 SKILL ZIP 제외 목록에 추가, `git check-ignore`·시험 ZIP으로 확인 |
 | R-11 | 채점자 셸에 다른 제출물용 `JWT_SECRET`(흔한 이름)이 남아 있으면 형식 검사(Base64·32바이트)로 README 실행 명령이 기동에 실패한다(실격 조건 1, S13 실측) | 해결(S13): 환경 변수를 이 프로젝트 전용 `TODO_JWT_SECRET`으로 변경(D-06) — `JWT_SECRET`만 있으면 무시하고 기동·가입 201, 전용 이름에 잘못된 값이면 기동 실패, 올바른 값이면 기동·가입 201 |
 | R-12 | 이 PC(macOS)에서는 README의 Windows 명령(`.\gradlew.bat`)과 Linux 실행을 확인할 수 없다(D-18) | 해결(S13, 사용자 결정): GitHub Actions에서 Windows·Linux·macOS × JDK 17·21로 테스트·실행·API 호출 실측 — 6개 조합 성공(run 40277959532). README 명령을 바꾸면 CI 스모크도 맞춘다(`docs.md`) |
+| R-13 | 선택 기능 탈퇴(OPT-03)를 행 삭제로 만들면 SQLite가 지운 마지막 사용자 ID를 새 가입자에게 다시 준다 — 탈퇴자의 남은 액세스 토큰(`sub` = ID, 최대 1시간)이 새 계정에 닿는다(sqlite3 재현: id 3 삭제 → 새 가입자 id 3). Hibernate SQLite 방언은 `AUTOINCREMENT`를 붙일 수 없다(소스) | 설계(D-21, S14): 행을 지우지 않고 `withdrawn` 표시(탈퇴 표시만 하면 새 가입자 id 4 — sqlite3 확인). 구현 시 `[OPT-03]` 테스트로 확인 |
 
 해결됨(2026-10-25): 원문 명세 확보·대조, Lombok·springdoc 유지 결정, `memory-bank/` 삭제, Git 저장소 초기화와 원격 연결.

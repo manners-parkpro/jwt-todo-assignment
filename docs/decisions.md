@@ -27,6 +27,7 @@
 | D-18 | README의 Windows 명령 범위 | 확정(S13 CI 실측) |
 | D-19 | 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 | 확정 |
 | D-20 | 계층 간 DTO(Command·Result)와 네이밍 규칙(참고 프로젝트) | 확정 |
+| D-21 | 선택 사항(가산점) 설계 — 제목 검색·회원정보 수정·탈퇴(soft delete)·기능 간 이벤트 | 설계 확정(구현은 사용자 승인 후 11단계) |
 
 ---
 
@@ -131,6 +132,7 @@
 - **결정**: OPT-01~03(검색, 회원 수정·탈퇴)은 필수 테스트 TEST-01~04, 확장 테스트 TEST-07·08, 선택 테스트 TEST-X를 마친 뒤(10단계 이후) 범위와 위험을 다시 판단해 결정한다(11단계). README는 그 결정 뒤 최종 API 기준으로 작성·실검증한다(12단계 — S7에서 README와 순서를 바꿨다). 추가 테스트(TEST-X)는 필수 4종 완료 후 작성한다.
 - **근거**: 명세 "안 해도 감점 없음", 평가 1순위는 요구사항대로 동작하는가, YAGNI. README를 먼저 쓰면 선택 기능을 넣을 때 API 목록과 실행 검증을 다시 해야 한다(독립 리뷰 지적). 회원 수정(비밀번호 변경)과 탈퇴는 리프레시 토큰 폐기와 TODO 정리(FK 없음) 같은 추가 결정이 필요하다.
 - **판단 항목(S10)**: 탈퇴(OPT-03)를 고르면 액세스 토큰은 만료(1시간) 전까지 유효해 탈퇴 뒤에도 TODO API를 호출할 수 있다 — FK가 없어 주인 없는 행이 생긴다. 기능 간 직접 참조 금지(`architecture.md`)와 함께 판단한다.
+- **보완(S14, 사용자 지시 #13)**: 지금까지는 처리 시점만 있고 API·규칙·테스트 설계가 없었다 → 가산점을 위해 OPT-01~03을 모두 설계했다(D-21). 구현 여부·순서는 사용자 승인을 받는다(CLAUDE.md 단계 게이트). 명세의 세 번째 선택 사항 "필수 시나리오 외의 추가 테스트"는 TEST-07·08·09·X2·API-10이 있고 TEST-X1·X3·X4가 10단계 계획이다.
 
 ### D-15 토큰 재발급(Refresh Token) 확장과 필수 테스트 보호 — 확정
 - **결정**:
@@ -205,3 +207,39 @@
 - **근거**: 사용자 지적 — Response가 도메인을 직접 변환하면 웹 표현이 도메인 모델에 묶여(도메인 필드 변경이 API 응답까지 번진다) 결합도가 높고, 초안 §5.7 "SOLID 원칙을 고려한다"에 어긋난다. 이 원칙은 CLAUDE.md를 압축할 때 빠져 있었다 → 작업 원칙 6에 복원했다. Result를 두면 웹은 application의 출력 계약에만 의존하고(DIP), 도메인 변경과 응답 변경의 이유가 나뉜다(SRP). 영속화 포트를 읽기·쓰기로 나누면 서비스가 쓰는 연산에만 의존한다(ISP).
 - **비용**: record 6개·포트 2개 증가(user·todo). API 동작은 같고 HTTP 통합 테스트로 회귀를 확인한다.
 - **대안**: 도메인 반환 유지(파일은 적지만 웹 ↔ 도메인 결합) · Request/Response까지 참고 구조대로 분리(package-private 경계 포기).
+
+### D-21 선택 사항(가산점) 설계 — 설계 확정(구현은 사용자 승인 후 11단계)
+- **공통**: 필수 API·TEST-01~04를 바꾸지 않는다(D-15와 같은 보호). 새 API의 401 확인도 TEST-03을 고치지 않고 각 기능 테스트에 둔다. 기능마다 구현 → 테스트 → TEST-01~04 회귀 → `ApiDocsTest` 목록 갱신 → `bootRun` 확인을 한 번에 하나씩 한다(OPT-01 → 02 → 03, 스키마 변경이 없는 것부터).
+- **OPT-01 제목 검색** `GET /todos/search?keyword=`(인증) → 200 `[Todo]`:
+  - 본인 TODO 중 제목에 검색어가 들어간 것만 id 오름차순으로 돌려준다(없으면 `[]`). ASCII 대소문자는 구분하지 않고, `%`·`_`는 문자 그대로 찾는다 — Spring Data JPA 3.5.13의 `Containing`이 값을 `\`로 이스케이프하고 `like … escape '\'`로 질의한다(소스 확인).
+  - 입력: `keyword` 필수·공백 불가·100자 이하(제목 최대 길이). 요청 record `TodoSearchRequest`를 `@Valid @ParameterObject`로 받는다 — 레코드 `@ModelAttribute`의 검증 실패는 `MethodArgumentNotValidException`이라(Spring 6.2.19 소스 확인) 기존 오류 형식(`errors[].field = keyword`)을 그대로 쓴다.
+  - `/todos/search`는 리터럴 경로라 `/todos/{id}`보다 먼저 매칭된다.
+  - 구현: `TodoUseCase.search(userId, keyword)`, `TodoQueryPort.findAllByUserIdAndTitleContaining`, `TodoRepository.findAllByUserIdAndTitleContainingIgnoreCaseOrderByIdAsc`.
+- **OPT-02 회원정보 수정** `PUT /users/me`(인증) → 200 `{id, username}`:
+  - 본문 `{"username", "current_password", "new_password"(선택)}`. `username`은 가입 규칙(필수·50자 이하), `new_password`는 가입 비밀번호 규칙(8~64자·UTF-8 72바이트 이하)을 따르고, 없으면 비밀번호를 바꾸지 않는다. 여러 단어 필드는 `@JsonProperty`로 snake_case(D-07).
+  - 현재 비밀번호를 가장 먼저 확인한다. OWASP ASVS 4.0.3 V2.1.6은 비밀번호 변경에 현재·새 비밀번호를 함께 요구한다. 확인 전에 username 중복(409)을 알려 주지 않으므로, 탈취한 액세스 토큰만으로 가입된 이름을 떠볼 수 없다.
+  - 틀리면 400 "현재 비밀번호가 일치하지 않습니다."로 응답한다. 401은 `WWW-Authenticate: Bearer`와 함께 토큰 문제를 뜻해, 클라이언트가 재발급을 시도하게 만들기 때문이다.
+  - 비밀번호를 바꾸면 그 사용자의 리프레시 토큰을 모두 폐기한다(다른 기기의 세션 종료). 이미 발급된 액세스 토큰은 만료(최대 1시간)까지 유효하다(무상태 JWT — D-15와 같은 한계).
+  - 구현: `UpdateUserRequest`·`UpdateUserCommand`, `UserUseCase.updateMe`, 도메인 `User.changeUsername`·`changePassword`, `InvalidCurrentPasswordException`(400 매핑), `UserService`에 `RefreshTokenCommandPort` 주입.
+- **OPT-03 탈퇴** `DELETE /users/me`(인증, 본문 없음) → 204:
+  - **사용자 행은 지우지 않고 탈퇴로 표시한다(soft delete).** SQLite PK에는 AUTOINCREMENT가 없다. 그래서 마지막 사용자를 지우면 다음 가입자가 같은 ID를 받는다(sqlite3 재현: id 3 삭제 → 새 가입자 id 3, 탈퇴 표시만 하면 새 가입자 id 4).
+  - 액세스 토큰은 `sub`(사용자 ID)만 담고 만료까지 유효하다. 행을 지우면 탈퇴자에게 남은 토큰이 새 가입자의 계정에 닿는다(계정 탈취 경로).
+  - Hibernate SQLite 방언은 PK를 표 끝의 `primary key (id)`로 만들기 때문에 `AUTOINCREMENT`를 붙일 수 없다(6.6.53 `SQLiteIdentityColumnSupport`·`StandardTableExporter` 소스).
+  - 한 트랜잭션에서 처리한다: `withdrawn = true`, 그 사용자의 리프레시 토큰 전부 삭제, TODO 전부 삭제.
+  - 탈퇴 뒤 응답: 로그인 401(같은 메시지), 재발급 401, 남은 액세스 토큰의 `GET`·`PUT`·`DELETE /users/me` 404. 탈퇴한 username은 다시 쓸 수 없다(가입 409). 행이 남아 유니크가 유지되며, 다른 사람이 탈퇴자의 이름으로 가입해 그 사람인 척하는 것도 막는다.
+  - TODO 삭제는 기능 간 직접 참조 금지를 지키도록 이벤트로 넘긴다. 순서: `UserService` → `UserEventPort.publishWithdrawn(userId)` → `user.adapter.out.event.UserEventAdapter`가 Spring 이벤트 `global.event.UserWithdrawnEvent` 발행 → `todo.adapter.in.event.UserWithdrawnEventListener` → `TodoUseCase.deleteAll(userId)`.
+  - 이벤트는 동기 `@EventListener`라 같은 트랜잭션·커넥션에서 실행된다. TODO 삭제가 실패하면 탈퇴 전체가 롤백된다. `@TransactionalEventListener(AFTER_COMMIT)`는 원자성이 깨져 쓰지 않는다.
+  - 스키마: `users.withdrawn boolean default false not null`(`@ColumnDefault("false")`). 기본값이 없으면 기존 `todo.db`에 열을 더하는 `ddl-auto: update`가 SQLite에서 실패한다(sqlite3 확인: "Cannot add a NOT NULL column with default value NULL"). Hibernate 스키마 갱신은 기존 표에 `alter table … add column`을 시도한다(`StandardTableMigrator`).
+  - 조회 포트: 로그인·내 정보는 탈퇴하지 않은 사용자만 찾는 `findActiveById`·`findActiveByUsername`(`…AndWithdrawnFalse`)로 바꾼다. `existsByUsername`은 탈퇴자를 포함한다.
+  - 알려진 한계(수용): 탈퇴 전에 받은 액세스 토큰은 만료(최대 1시간)까지 TODO API를 호출할 수 있다. 그 ID는 다시 쓰이지 않으므로 다른 사용자에게 닿지 않는다. 막으려면 요청마다 사용자 상태를 조회해야 하고, 그러면 필수 API의 인증 경로가 바뀐다.
+- **테스트**(이름에 `[OPT-0x]`):
+  - 검색: 본인 것만·제목만·id 순, `%`·`_` 문자 그대로, 검색어 없음·공백 400, 토큰 없음 401.
+  - 수정: 새 정보로 로그인 200, 옛 비밀번호 401, 비밀번호를 바꾸면 옛 refresh_token 401, 현재 비밀번호가 틀리면 400이고 아무것도 바뀌지 않음, username 중복 409.
+  - 탈퇴: 204 → 로그인 401·재발급 401·`/users/me` 404, TODO 삭제(다른 사용자 TODO는 그대로), 같은 username 재가입 409. **새 가입자가 탈퇴자의 ID를 받지 않고, 탈퇴자 토큰으로 새 계정에 접근할 수 없음**을 확인한다.
+- **대안**:
+  - 하드 삭제 — AUTOINCREMENT를 쓸 수 없어 ID 재사용으로 계정 탈취 경로가 생긴다.
+  - 요청마다 사용자 존재·토큰 발급 시각 확인 — 필수 API 인증 경로가 바뀌고 요청마다 조회한다.
+  - 탈퇴 시 비밀번호 재확인 — DELETE 본문은 의미가 정의되지 않았다(RFC 9110 §9.3.5).
+  - username 해제 — 등록할 수 없는 대체 값을 만들어야 하고 사칭 방지가 사라진다.
+  - `UserService`가 todo 포트를 직접 호출 — 기능 간 참조 금지를 어긴다.
+  - 탈퇴자 TODO를 남겨 둠 — 다른 사람에게는 닿지 않지만, 탈퇴한 사용자의 데이터가 남는다.

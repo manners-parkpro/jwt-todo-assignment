@@ -31,6 +31,8 @@ com.assignment
 - `adapter.out.*`: `application.port.out`을 구현하고 `domain`을 사용한다. `global`은 공통 설정만 담고 기능 로직을 두지 않는다.
 - 어댑터 패키지(`adapter.*`)의 클래스(컨트롤러·DTO·JPA 엔티티·Spring Data 리포지토리·어댑터 구현)는 package-private으로 둔다 — 포트 밖에서 참조하면 컴파일 오류가 난다. 도메인·포트·서비스·기능 예외는 public이다.
 - 기능 간(`user` ↔ `todo`) 직접 참조 금지. TODO는 소유자를 `userId`(Long)로만 참조한다(집합체 간 ID 참조).
+  - 다른 기능에 일을 넘겨야 하면 `global.event`의 이벤트 record로만 넘긴다(선택 OPT-03 설계 — D-21). 순서: 발행 기능의 `<대상>EventPort` → `adapter/out/event`의 어댑터가 Spring 이벤트 발행 → 받는 기능의 `adapter/in/event` 리스너가 자기 In Port 호출.
+  - 리스너는 동기 `@EventListener`로 둬서 같은 트랜잭션에서 실행한다(커넥션 1개, 실패하면 함께 롤백).
 
 ## 포트 정책
 - In Port: 책임별 인터페이스 — `UserUseCase`(가입·내 정보), `AuthUseCase`(로그인·토큰 재발급), `TodoUseCase`(생성·목록·단건·수정·삭제). 호출자가 컨트롤러 하나뿐이라 유스케이스마다 쪼개지 않는다.
