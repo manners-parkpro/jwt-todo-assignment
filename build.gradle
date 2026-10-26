@@ -13,6 +13,8 @@ repositories {
 
 // Boot 3.5 OSS 지원 종료 후 Apache가 낸 Tomcat 보안 패치를 적용한다
 ext['tomcat.version'] = '10.1.61'
+// Boot가 관리하는 Lombok 1.18.46은 JDK 27 javac에서 컴파일이 실패한다 — JDK 27을 지원하는 1.18.48로 올린다
+ext['lombok.version'] = '1.18.48'
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
