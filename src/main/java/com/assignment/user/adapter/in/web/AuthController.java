@@ -17,6 +17,6 @@ class AuthController {
 
 	@PostMapping("/login")
 	TokenResponse login(@Valid @RequestBody LoginRequest request) {
-		return new TokenResponse(authUseCase.login(request.username(), request.password()));
+		return TokenResponse.from(authUseCase.login(request.toCommand()));
 	}
 }

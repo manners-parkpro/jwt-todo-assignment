@@ -1,5 +1,6 @@
 package com.assignment.global.error;
 
+import com.assignment.todo.application.TodoNotFoundException;
 import com.assignment.user.application.DuplicateUsernameException;
 import com.assignment.user.application.InvalidCredentialsException;
 import com.assignment.user.application.UserNotFoundException;
@@ -43,8 +44,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 				.body(ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage()));
 	}
 
-	@ExceptionHandler(UserNotFoundException.class)
-	ResponseEntity<ProblemDetail> handleUserNotFound(UserNotFoundException e) {
+	// 다른 사용자의 TODO도 TodoNotFoundException으로 오므로 응답만으로는 존재 여부를 알 수 없다
+	@ExceptionHandler({UserNotFoundException.class, TodoNotFoundException.class})
+	ResponseEntity<ProblemDetail> handleNotFound(RuntimeException e) {
 		return problem(HttpStatus.NOT_FOUND, e.getMessage());
 	}
 

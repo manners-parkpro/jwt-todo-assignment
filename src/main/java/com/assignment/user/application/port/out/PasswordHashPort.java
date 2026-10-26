@@ -1,6 +1,6 @@
 package com.assignment.user.application.port.out;
 
-public interface PasswordHasher {
+public interface PasswordHashPort {
 
 	String hash(String rawPassword);
 

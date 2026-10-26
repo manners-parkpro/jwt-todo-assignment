@@ -1,6 +1,6 @@
 package com.assignment.user.adapter.out.security;
 
-import com.assignment.user.application.port.out.TokenIssuer;
+import com.assignment.user.application.port.out.AccessTokenPort;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,8 +11,9 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
+// 액세스 토큰을 JWT(HS256)로 발급한다
 @Component
-class JwtTokenIssuer implements TokenIssuer {
+class AccessTokenAdapter implements AccessTokenPort {
 
 	// NimbusJwtEncoder의 기본 헤더는 RS256이라 HS256을 명시하지 않으면 서명 키를 고르지 못해 발급이 실패한다
 	private static final JwsHeader HS256_HEADER = JwsHeader.with(MacAlgorithm.HS256).build();
@@ -20,13 +21,13 @@ class JwtTokenIssuer implements TokenIssuer {
 	private final JwtEncoder jwtEncoder;
 	private final Duration accessTokenTtl;
 
-	JwtTokenIssuer(JwtEncoder jwtEncoder, @Value("${auth.access-token-ttl}") Duration accessTokenTtl) {
+	AccessTokenAdapter(JwtEncoder jwtEncoder, @Value("${auth.access-token-ttl}") Duration accessTokenTtl) {
 		this.jwtEncoder = jwtEncoder;
 		this.accessTokenTtl = accessTokenTtl;
 	}
 
 	@Override
-	public String issueAccessToken(Long userId) {
+	public String issue(Long userId) {
 		Instant now = Instant.now();
 		JwtClaimsSet claims = JwtClaimsSet.builder()
 				.subject(String.valueOf(userId))

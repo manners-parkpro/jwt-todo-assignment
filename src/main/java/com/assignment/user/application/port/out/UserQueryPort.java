@@ -3,9 +3,7 @@ package com.assignment.user.application.port.out;
 import com.assignment.user.domain.User;
 import java.util.Optional;
 
-public interface UserRepository {
-
-	User save(User user);
+public interface UserQueryPort {
 
 	Optional<User> findById(Long id);
 

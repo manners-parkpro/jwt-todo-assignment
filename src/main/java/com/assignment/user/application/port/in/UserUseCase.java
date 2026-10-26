@@ -1,10 +1,11 @@
 package com.assignment.user.application.port.in;
 
-import com.assignment.user.domain.User;
+import com.assignment.user.application.dto.SignupCommand;
+import com.assignment.user.application.dto.UserResult;
 
 public interface UserUseCase {
 
-	User signup(String username, String rawPassword);
+	UserResult signup(SignupCommand command);
 
-	User getMe(Long userId);
+	UserResult getMe(Long userId);
 }

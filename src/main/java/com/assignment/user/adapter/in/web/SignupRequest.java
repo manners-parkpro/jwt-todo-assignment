@@ -1,5 +1,6 @@
 package com.assignment.user.adapter.in.web;
 
+import com.assignment.user.application.dto.SignupCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -12,4 +13,8 @@ record SignupRequest(
 		@Size(min = 8, max = 64, message = "비밀번호는 8~64자여야 합니다.")
 		@MaxUtf8Bytes(value = 72, message = "비밀번호는 UTF-8 기준 72바이트 이하여야 합니다.")
 		String password) {
+
+	SignupCommand toCommand() {
+		return new SignupCommand(username, password);
+	}
 }

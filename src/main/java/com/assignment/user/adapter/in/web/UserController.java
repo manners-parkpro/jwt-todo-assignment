@@ -22,7 +22,7 @@ class UserController {
 	@PostMapping("/signup")
 	@ResponseStatus(HttpStatus.CREATED)
 	UserResponse signup(@Valid @RequestBody SignupRequest request) {
-		return UserResponse.from(userUseCase.signup(request.username(), request.password()));
+		return UserResponse.from(userUseCase.signup(request.toCommand()));
 	}
 
 	@GetMapping("/me")

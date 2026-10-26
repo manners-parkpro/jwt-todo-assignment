@@ -2,9 +2,12 @@ package com.assignment.user.application.service;
 
 import com.assignment.user.application.DuplicateUsernameException;
 import com.assignment.user.application.UserNotFoundException;
+import com.assignment.user.application.dto.SignupCommand;
+import com.assignment.user.application.dto.UserResult;
 import com.assignment.user.application.port.in.UserUseCase;
-import com.assignment.user.application.port.out.PasswordHasher;
-import com.assignment.user.application.port.out.UserRepository;
+import com.assignment.user.application.port.out.PasswordHashPort;
+import com.assignment.user.application.port.out.UserCommandPort;
+import com.assignment.user.application.port.out.UserQueryPort;
 import com.assignment.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,21 +17,25 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService implements UserUseCase {
 
-	private final UserRepository userRepository;
-	private final PasswordHasher passwordHasher;
+	private final UserCommandPort userCommandPort;
+	private final UserQueryPort userQueryPort;
+	private final PasswordHashPort passwordHashPort;
 
 	@Override
 	@Transactional
-	public User signup(String username, String rawPassword) {
-		if (userRepository.existsByUsername(username)) {
+	public UserResult signup(SignupCommand command) {
+		if (userQueryPort.existsByUsername(command.username())) {
 			throw new DuplicateUsernameException();
 		}
-		return userRepository.save(User.create(username, passwordHasher.hash(rawPassword)));
+		User user = User.create(command.username(), passwordHashPort.hash(command.rawPassword()));
+		return UserResult.from(userCommandPort.save(user));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public User getMe(Long userId) {
-		return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+	public UserResult getMe(Long userId) {
+		return userQueryPort.findById(userId)
+				.map(UserResult::from)
+				.orElseThrow(UserNotFoundException::new);
 	}
 }
