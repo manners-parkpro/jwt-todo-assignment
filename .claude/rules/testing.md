@@ -18,7 +18,7 @@ paths:
 ## 구성
 - 통합 테스트: `@SpringBootTest` + `@AutoConfigureMockMvc` + `@ActiveProfiles("test")`를 공통 베이스 `IntegrationTestSupport`에 둔다.
 - 보안 필터를 포함한 실제 흐름으로 검증한다. 토큰은 `/users/login` 응답에서 추출한다(`@WithMockUser`·목 인증 미사용). 준비 단계의 가입·로그인은 `IntegrationTestSupport`의 도우미로 공유한다(TEST-01은 그 흐름이 시나리오 자체라 직접 작성한다).
-- JWT 키: 테스트는 `JWT_SECRET` 없이 실행되어 애플리케이션이 기동 시 만든 임의 키를 쓴다. 저장소에 테스트 키를 두지 않는다.
+- JWT 키: 테스트는 `TODO_JWT_SECRET` 없이 실행되어 애플리케이션이 기동 시 만든 임의 키를 쓴다. 저장소에 테스트 키를 두지 않는다.
 - 만료 토큰은 컨텍스트의 `JwtEncoder`로 `exp`가 현재보다 과거인 토큰을 발급한다(clock skew 0). 위조 토큰은 다른 임의 키로 서명한다.
 - 테스트 이름에 체크리스트 ID를 넣는다: `@DisplayName("[TEST-01] 회원가입 → 로그인 → 내 정보 조회")`.
 

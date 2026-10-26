@@ -15,8 +15,8 @@ paths:
 - 직접 만드는 요청 매처는 `PathPatternRequestMatcher`(6.5+)를 쓴다 — `AntPathRequestMatcher`는 제거 예정(`@Deprecated(forRemoval = true)`)이다. 문자열 `requestMatchers(...)`는 프레임워크가 매처를 고르므로 그대로 쓴다. 공개 엔드포인트 목록은 `SecurityConfig`의 매처 하나로 permitAll과 헤더 무시에 함께 쓴다(재발급 경로는 8단계에 추가).
 
 ## 액세스 토큰 (JWT, HS256)
-- 설정: `auth.jwt-secret: ${JWT_SECRET:}`, `auth.access-token-ttl: 1h`.
-- 키: `JWT_SECRET`(Base64)이 없으면 기동 시 `SecureRandom` 32바이트 키를 만들고 WARN 로그를 남긴다(재시작하면 기존 액세스 토큰은 무효 → 리프레시 토큰으로 재발급). 값이 Base64가 아니거나 디코딩 결과가 32바이트 미만이면 기동을 실패시킨다. **고정 키·기본 키를 코드·설정 파일·테스트 리소스에 두지 않는다.**
+- 설정: `auth.jwt-secret: ${TODO_JWT_SECRET:}`, `auth.access-token-ttl: 1h`. 환경 변수 이름은 이 프로젝트 전용이다 — 흔한 이름 `JWT_SECRET`은 같은 과제의 다른 제출물용 값이 채점자 셸에 남아 있으면 형식 검사로 기동이 실패한다(S13 실측, D-06).
+- 키: `TODO_JWT_SECRET`(Base64)이 없으면 기동 시 `SecureRandom` 32바이트 키를 만들고 WARN 로그를 남긴다(재시작하면 기존 액세스 토큰은 무효 → 리프레시 토큰으로 재발급). 값이 Base64가 아니거나 디코딩 결과가 32바이트 미만이면 기동을 실패시킨다. **고정 키·기본 키를 코드·설정 파일·테스트 리소스에 두지 않는다.**
 - 발급: `new NimbusJwtEncoder(new ImmutableSecret<>(secretKey))`. 파라미터에 **`JwsHeader.with(MacAlgorithm.HS256)`를 명시**한다 — 기본 헤더가 RS256이라 생략하면 서명 키를 찾지 못해 실패한다.
 - 클레임: `sub`=사용자 ID(문자열), `iat`, `exp`. 사용자명·비밀번호 해시 같은 개인정보와 쓰지 않는 클레임(`iss` 등)은 넣지 않는다.
 - 검증: `NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build()` 후 `setJwtValidator(new JwtTimestampValidator(Duration.ZERO))` → 서명·`exp`/`nbf`. 발급과 검증이 같은 서버라 clock skew를 두지 않는다(기본값 60초면 만료 후에도 통과한다).

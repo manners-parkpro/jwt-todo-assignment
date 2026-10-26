@@ -22,8 +22,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew test                    # �
 JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew test --tests '*Todo*'   # 일부 테스트만 실행
 JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew clean build             # 단계 완료·제출 전 교차 확인
 JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew --version               # 사용 JDK는 Launcher JVM으로 확인(java -version은 PATH의 21)
-./gradlew bootRun                                                            # 로컬 실행 (JWT_SECRET 미설정 시 임의 키 생성)
-JWT_SECRET="$(openssl rand -base64 32)" ./gradlew bootRun                    # 서명 키를 고정해 실행
+./gradlew bootRun                                                            # 로컬 실행 (TODO_JWT_SECRET 미설정 시 임의 키 생성)
+TODO_JWT_SECRET="$(openssl rand -base64 32)" ./gradlew bootRun               # 서명 키를 고정해 실행
 sqlite3 todo.db '.schema'                                                    # 테이블·유니크·인덱스 확인 (개발 측 검증용 — README에는 쓰지 않음)
 ```
 

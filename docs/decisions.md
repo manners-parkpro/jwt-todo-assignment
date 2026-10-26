@@ -12,7 +12,7 @@
 | D-03 | 기능별 헥사고날 + 경량 DDD, 포트 정책 | 확정(포트 이름·Command 범위·반환 타입은 → D-20) |
 | D-04 | 도메인 모델·JPA 엔티티 분리, 집합체 간 ID 참조 | 확정 |
 | D-05 | 액세스 토큰: OAuth2 Resource Server(Nimbus) + HS256, clock skew 0 | 확정 |
-| D-06 | 서명 키(미설정 시 임의 키)·액세스 토큰 수명 1시간 | 확정 |
+| D-06 | 서명 키(미설정 시 임의 키, 환경 변수 `TODO_JWT_SECRET`)·액세스 토큰 수명 1시간 | 확정(S13 이름 변경) |
 | D-07 | 응답 규약: 토큰 응답 필드 명시 · ProblemDetail · 상태 코드 | 확정 |
 | D-08 | 소유권 검사와 존재 은닉(타인 TODO 404) | 확정 |
 | D-09 | 비밀번호·로그인 정책(BCrypt 72바이트 제한 대응) | 확정 |
@@ -24,7 +24,7 @@
 | D-15 | 토큰 재발급(Refresh Token) 확장과 필수 테스트 보호 | 확정 |
 | D-16 | 프롬프트 기록 보존(같은 턴 기록·훅 자동 백업·백필) | 확정 |
 | D-17 | 지침 로드 보장과 검증(CLAUDE.md 전체 주입 확인, 로드 기록 훅) | 확정 |
-| D-18 | README의 Windows 명령 범위 | 확정 |
+| D-18 | README의 Windows 명령 범위 | 확정(S13 CI 실측) |
 | D-19 | 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 | 확정 |
 | D-20 | 계층 간 DTO(Command·Result)와 네이밍 규칙(참고 프로젝트) | 확정 |
 
@@ -73,6 +73,10 @@
 - **결정**: 설정은 `auth.jwt-secret: ${JWT_SECRET:}`, `auth.access-token-ttl: 1h`. `JWT_SECRET`(Base64, 디코딩 32바이트 이상)이 있으면 그 키를 쓰고, 없으면 기동 시 `SecureRandom` 32바이트 키를 만들고 WARN 로그를 남긴다. 값의 형식이 잘못되면 기동을 실패시킨다. 테스트도 환경 변수 없이 자동 생성 키를 쓴다.
 - **근거**: 실격 조건 "README에 적힌 명령어로 실행되지 않는 경우" — 환경 변수를 빠뜨려도 실행된다. 초안의 "서명 키 하드코딩 금지"를 지킨다(고정 키 없음). 재시작하면 기존 액세스 토큰이 무효가 되지만 리프레시 토큰으로 다시 발급받는다(D-15, 사용자 인지 2026-10-25). RFC 8725 §3.5(충분한 엔트로피의 키) → `SecureRandom` 또는 `openssl rand -base64 32`.
 - **대안**: 키 필수(fail-fast) — 운영 환경에는 더 엄격하지만 채점자가 설정을 빠뜨리면 기동이 실패하고 테스트 키 주입 코드가 필요하다. 테스트 프로파일에 더미 키 — 저장소에 키 문자열이 남는다.
+- **보완(S13, 실격 위험 점검)**: 환경 변수 이름을 `JWT_SECRET` → `TODO_JWT_SECRET`으로 바꿨다(`auth.jwt-secret: ${TODO_JWT_SECRET:}`).
+  - 이유: 같은 과제를 받은 다른 지원자들도 흔히 `JWT_SECRET`을 쓴다. 채점자가 여러 제출물을 한 셸에서 실행하면 다른 형식의 값이 남아 있을 수 있고, 그러면 우리 형식 검사(Base64·32바이트)로 README 명령이 기동에 실패한다 — `JWT_SECRET='my-jwt-secret-for-another-project'`로 실측.
+  - 결과: 전용 이름이 아닌 값은 무시하고 임의 키로 기동하며(실측), 전용 이름에 잘못된 값을 넣은 경우에만 기동을 멈춘다(명시적 설정 오류는 숨기지 않는다).
+  - 사용자 결정(S13): TTL(`access-token-ttl`·`refresh-token-ttl`)은 `@Value` 기본값이 아니라 yml에 둔다(현행 유지).
 
 ### D-07 응답 규약 — 확정
 - **결정**: 로그인·재발급 응답은 `{"access_token": ..., "refresh_token": ...}`이고 두 필드에 `@JsonProperty`로 snake_case를 명시한다(사용자 결정 2026-10-25). 다른 필드는 모두 한 단어이며, 여러 단어 필드를 추가하면 같은 방식으로 명시한다. 오류는 RFC 9457 ProblemDetail(401 포함), 상태 코드는 `.claude/rules/api.md` 표(201+Location·200·204·400·401·404·409)를 따른다. 모든 401(토큰 오류·로그인·재발급 실패)에 `WWW-Authenticate: Bearer`를 넣는다(RFC 9110 §15.5.2 MUST — S7 보완). `@JsonProperty`는 응답뿐 아니라 재발급 요청 record에도 붙인다. `detail`은 직접 작성하는 메시지만 한국어로 쓰고, Spring MVC 표준 예외의 기본 `detail`은 영문 그대로 둔다(S8 리뷰 — 초안·명세에 언어 조건이 없고 기본값에 내부 정보가 없음을 확인. 바꾸려면 `messages.properties`의 `problemDetail.<예외 클래스>` 코드를 쓴다).
@@ -137,7 +141,7 @@
 - **보완(S12, 구현 전 재검토)**:
   - TEST-09 추가: 계획된 TEST-07·08은 회전·재사용만 확인해 "7일 만료" 규칙을 검증하는 테스트가 없었다 → 수명 0초 컨텍스트(전용 DB 파일)에서 만료·없는 토큰이 같은 401인지 확인한다.
   - 필수 테스트 보호: 테스트 도우미를 access_token 전용과 확장용으로 나누고, 로그인 응답의 `refresh_token`을 null로 바꾼 변이에서 TEST-01~04가 통과함을 확인했다.
-  - 해시는 SHA-256을 유지한다. HMAC(서버 키)은 `JWT_SECRET` 미설정 시 재시작마다 키가 바뀌어 리프레시 토큰까지 무효가 되므로 확장 목적(재시작 후 재발급)과 충돌한다. 256비트 난수라 SHA-256만으로 추측할 수 없다.
+  - 해시는 SHA-256을 유지한다. HMAC(서버 키)은 서명 키(`TODO_JWT_SECRET`) 미설정 시 재시작마다 키가 바뀌어 리프레시 토큰까지 무효가 되므로 확장 목적(재시작 후 재발급)과 충돌한다. 256비트 난수라 SHA-256만으로 추측할 수 없다.
   - 만료 기준은 "현재 ≥ 만료 시각"이고, 로그인 때의 정리 쿼리도 같은 기준(`LessThanEqual`)이다.
   - 알려진 한계(수용): 재사용 탐지로 폐기해도 이미 발급된 액세스 토큰은 만료까지 최대 1시간 유효하다(무상태 JWT). 같은 리프레시 토큰으로 동시에 재발급하면 재사용으로 판정해 그 사용자의 리프레시 토큰을 모두 폐기한다(RFC 9700의 엄격한 동작). 재발급마다 7일이 다시 시작되며 전체 세션 수명 상한은 두지 않는다.
 - **보완(S10)**: 재사용 탐지로 폐기한 뒤 401 예외를 던지면 Spring 기본 롤백 규칙(RuntimeException)으로 폐기가 취소된다 → 재발급 메서드는 `@Transactional(noRollbackFor = …)`로 폐기를 커밋하고, 예외는 그 메서드 안에서 직접 던진다. 같은 트랜잭션에 참여하는 다른 `@Transactional` 경계를 거쳐 나오면 그 경계가 트랜잭션을 rollback-only로 표시해 커밋 때 `UnexpectedRollbackException`(500)이 난다(S10 리뷰). `REQUIRES_NEW`로 분리하지 않는다(D-10 — 30초 대기 뒤 실패). TEST-08("재사용 뒤 최신 토큰도 401")로 검증한다.
@@ -169,9 +173,14 @@
 - **대안**: SessionStart 훅으로 CLAUDE.md 재출력(중복 주입) · 훅 없이 `/context`만 사용(사용자 화면에서만 확인되고 기록이 남지 않음).
 
 ### D-18 README의 Windows 명령 범위 — 확정
-- **결정**: README 명령은 macOS/Linux 기준으로 실측한 것만 적고, Windows는 Gradle Wrapper 표준 명령(`.\gradlew.bat bootRun`, `.\gradlew.bat test`)만 함께 적는다. PowerShell 키 생성 같은 추가 명령은 적지 않는다(`JWT_SECRET`은 선택).
+- **결정**: README 명령은 macOS/Linux 기준으로 실측한 것만 적고, Windows는 Gradle Wrapper 표준 명령(`.\gradlew.bat bootRun`, `.\gradlew.bat test`)만 함께 적는다. PowerShell 키 생성 같은 추가 명령은 적지 않는다(`TODO_JWT_SECRET`은 선택).
 - **근거**: 실격 조건 1(README 명령으로 실행되지 않음)과 "실행해 확인한 명령만 적는다"는 규칙이 충돌한다 — 이 PC는 macOS라 Windows 명령을 실행할 수 없다(독립 리뷰 지적). Wrapper 스크립트는 Gradle이 생성한 표준 파일이고 같은 태스크를 호출하므로 위험이 가장 낮다. sqlite-jdbc 3.49.1.0 jar에 Windows 네이티브 라이브러리(x86·x86_64·aarch64·armv7)가 들어 있음을 확인했다(S7).
-- **대안**: Windows 명령 생략(Windows 채점자 불편) · CI(Windows 러너)로 실측(범위 밖 — 필요하면 사용자 결정).
+- **대안**: Windows 명령 생략(Windows 채점자 불편) · CI(Windows 러너)로 실측(범위 밖 — 필요하면 사용자 결정 → S13에서 채택).
+- **보완(S13, 사용자 결정 "GitHub Actions로 실측")**: `.github/workflows/ci.yml`이 push마다 Windows·Linux·macOS × JDK 17·21(Temurin)에서 README 명령을 그대로 실행한다.
+  - 테스트: `./gradlew test`(Windows는 PowerShell에서 `.\gradlew.bat test`).
+  - 실행: `todo.db`가 없는 상태에서 `./gradlew bootRun`(Windows `.\gradlew.bat bootRun`)만으로 띄운 뒤 `.github/ci/ReadmeSmoke.java`(JDK 단일 파일 실행, ASCII 소스)가 가입 201 → 로그인 200 → 내 정보 200 → 토큰 없는 목록 401 → TODO 생성 201·목록 200·수정 200·삭제 204 → 삭제 뒤 조회 404(한국어 detail 보존) → 재발급 200을 확인한다. 테이블이 있어야 성공하는 호출이므로 실행 명령만으로 테이블이 생김을 함께 보인다(Linux·macOS는 `sqlite3 .schema`로 테이블 3개·인덱스 2개 출력).
+  - 결과: 커밋 `5e37ef0` 실행(run 40277959532)에서 6개 조합 모두 성공 — 각 작업에서 `> Task :test` 실행·BUILD SUCCESSFUL, 스모크 10개 호출이 기대 상태 코드와 일치. Windows에서도 404 응답의 한국어 detail이 그대로였다(소스 컴파일 인코딩 문제 없음 — Gradle이 javac에 `-encoding UTF-8`을 넘기는 것은 로컬 디버그 로그로 확인).
+  - 같은 실행에서 Windows 작업만 작업 뒤 캐시 저장이 경고로 실패했다(`fileHashes.lock … Device or resource busy` — 실행 중인 서버의 Gradle 데몬이 잠금 파일을 쥠). 검증 결과와는 무관하지만, 서버를 멈추는 단계를 로그 보관 전에 두었다.
 
 ### D-19 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 — 확정
 - **결정**:

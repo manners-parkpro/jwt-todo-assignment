@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 1. **체크리스트**: `docs/requirements-checklist.md`에서 ⬜·🟨·❌ 항목을 모두 나열한다.
 2. **빌드·테스트**: `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew clean build`와 `JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew clean build`(명세 최소 JDK) → 통과·실패 수 확인(`build/test-results/test/*.xml`). 셸 환경 변수는 명령마다 초기화되므로 JDK는 접두로 지정하고, 같은 접두의 `./gradlew --version` Launcher JVM으로 확인한다.
-3. **실행 스모크** (README 명령 그대로, `JWT_SECRET` 없이, `todo.db`를 지운 클린 상태에서):
+3. **실행 스모크** (README 명령 그대로, `TODO_JWT_SECRET` 없이, `todo.db`를 지운 클린 상태에서):
    - `./gradlew bootRun`을 백그라운드로 실행하고 기동 로그(임의 키 WARN 포함)를 확인한다. 로그는 `build/` 밖(스크래치 경로)에 저장한다 — `clean`이 `build/`를 지운다.
    - curl로 상태 코드 확인: 가입 201 → 로그인 200(`access_token`·`refresh_token` 존재) → `/users/me` 200 → TODO 생성 201 → 목록 200 → 수정 200 → 삭제 204 → 토큰 없이 `/todos` 401 → 없는 ID 404 → 재발급 200(새 토큰 쌍) → 사용한 리프레시 토큰 재사용 401 → `/v3/api-docs` 200(`access_token`·`refresh_token` 표기 확인).
      ```bash
@@ -26,7 +26,7 @@ disable-model-invocation: true
    - 종료 후 남은 프로세스가 없는지 확인한다. 토큰 값은 출력·기록하지 않는다.
 4. **정적 점검**:
    - 도메인 순수성: `grep -rnE 'import (org\.springframework|jakarta\.persistence|com\.fasterxml)' src/main/java/com/assignment/*/domain` → 출력 없음
-   - 고정 키: `grep -rniE 'secret' src/main/resources src/test/resources` → `${JWT_SECRET:}` 참조 외 없음
+   - 고정 키: `grep -rniE 'secret' src/main/resources src/test/resources` → `${TODO_JWT_SECRET:}` 참조 외 없음
    - 사용 금지 기능: `grep -rnE 'UnboundIdContainer|AesBytesEncryptor|SpelExpressionParser|nativeQuery|@NativeQuery' src/main` → 출력 없음
    - 테이블 생성 경로 단일화: `ls src/main/resources` → `schema.sql`·`data.sql` 없음, `grep -niE 'sqlite3|create table|insert into' README.md` → 출력 없음
    - 커밋 작성자: `git log --format='%ae%n%ce' | sort -u` → GitHub noreply 주소만(회사 도메인 없음)

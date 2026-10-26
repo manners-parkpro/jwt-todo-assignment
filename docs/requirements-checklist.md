@@ -15,7 +15,7 @@
 | TECH-04 | ORM은 Spring Data JPA(명세 권장), DB는 SQLite3 | 명세 기술 조건 | `build.gradle`, `application.yaml` | 기동·CRUD 테스트 | ✅ SQLite에서 생성·조회·수정·삭제 동작(TEST-02, S10 bootRun) |
 | TECH-05 | 테스트는 JUnit 5 (Boot 3.5.16 → 5.12.2) | 명세 기술 조건 | `src/test` | `./gradlew test`, 의존성 버전 | ✅ JUnit 5.12.2로 테스트 실행(S6) |
 | TECH-06 | 테이블은 README 명령만으로 생성 — 생성 경로는 `ddl-auto` 하나(수동 SQL·`schema.sql`·DB 파일 제공 금지), README에 SQL 명령 없음 | 명세 기술 조건·요청·D-10 | `application.yaml` | `todo.db`를 지운 클린 상태에서 README 명령만 실행 후 `.schema` | 🟨 `todo.db` 없는 상태에서 `bootRun`만으로 기동 중(요청 전) 테이블·인덱스 생성, 재기동 DDL 0건·데이터 유지, `./gradlew test`는 별도 테스트 DB(S11). README 작성 후 README 명령으로 최종 확인(12단계) |
-| TECH-07 | **⚠ 실격** README에 적힌 명령어로 실행·테스트 가능 | 명세 실격 조건 | `README.md` | README 순서대로 클린 실행 | ⬜ |
+| TECH-07 | **⚠ 실격** README에 적힌 명령어로 실행·테스트 가능 | 명세 실격 조건 | `README.md` | README 순서대로 클린 실행 | 🟨 README에 적을 명령을 CI로 실측 — Linux·macOS `./gradlew test`·`./gradlew bootRun`, Windows(PowerShell) `.\gradlew.bat test`·`.\gradlew.bat bootRun`, 각 JDK 17·21 → 6개 조합 모두 테스트 통과·`todo.db` 없는 상태에서 기동·API 10개 호출 성공(S13, run 40277959532). README 작성 후 README 순서대로 최종 확인(12단계) |
 | TECH-08 | 내장 Tomcat 보안 패치 버전(10.1.61) 오버라이드 | 설계·D-01 | `build.gradle` | `dependencyInsight` | ✅ 10.1.55 → 10.1.61 selected by rule(S4) |
 
 ## 2. API (API) — 계약 상세: `.claude/rules/api.md`
@@ -94,11 +94,11 @@
 | ID | 요구사항 | 출처 | 구현 위치 | 검증 방법 | 상태 |
 |---|---|---|---|---|---|
 | DOC-01 | README: 선택한 스택(B. Spring Boot와 버전) | 명세 제출물 | `README.md` | 검토 | ⬜ |
-| DOC-02 | README: 실행 방법(JDK 17 이상, 실행 명령만으로 테이블 생성, `JWT_SECRET` 선택, Windows 명령 병기, SQL 명령 없음) | 명세 제출물·초안·요청 | `README.md` | README대로 실행 | ⬜ |
+| DOC-02 | README: 실행 방법(JDK 17 이상, 실행 명령만으로 테이블 생성, `TODO_JWT_SECRET` 선택, Windows 명령 병기, SQL 명령 없음) | 명세 제출물·초안·요청 | `README.md` | README대로 실행 | ⬜ |
 | DOC-03 | README: 테스트 실행 방법 `./gradlew test` | 명세 제출물 | `README.md` | 실행 확인 | ⬜ |
 | DOC-04 | README: API 목록 요약(+ Swagger UI 주소) | 명세 제출물·D-02 | `README.md` | `api.md`와 대조 | ⬜ |
 | DOC-05 | README: 인증 방법(로그인 → Bearer, 만료 1시간, `/users/refresh` 재발급) | 초안·요청 | `README.md` | 검토 | ⬜ |
-| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#9 기록 — 압축 뒤 원문 대조로 누락 없음 확인(S7·S10) |
+| DOC-06 | **⚠ 실격** `prompts/used_prompts.md` — 주요 프롬프트와 결과 확인·수정 내용을 간단히, 링크 대체 불가 | 명세 제출물·실격 조건 | `prompts/used_prompts.md` | 제출 전 내용 확인 | 🟨 #1~#11 완료, #12·#13 진행 중 — 압축 뒤 원문 대조로 누락 없음 확인(S7·S10·S13) |
 | DOC-07 | 프롬프트 원문 보존 — 받은 턴 안에 기록, 훅 자동 백업(로컬), 이전 프롬프트 백필 | 요청·D-16 | `.claude/hooks/log-prompt.py`, `.claude/prompt-history.jsonl` | 파이프 테스트, 다음 프롬프트 기록 확인 | ✅ 실제 프롬프트·작업 중 메시지가 `source: "hook"`으로 기록됨(S5), 압축 뒤 첫 프롬프트 기록·하네스 메시지 제외(S7) |
 | DOC-08 | 세션 시작·압축 후 CLAUDE.md 전체 로드 확인과 지침 로드 기록 | 요청·D-17 | `.claude/hooks/log-instructions.py`, `.claude/instructions-log.jsonl` | 트랜스크립트 주입본과 디스크 파일 비교, 훅 기록 | 🟨 CLAUDE.md 전체 주입·`path_glob_match` 기록(S7), 압축 직후 `compact` 기록 = 커밋본 5,753자·해시 일치(S10). `session_start`는 다음 새 세션에서 확인 |
 | SUB-01 | 파일명 `이름_springboot.zip`, 제출처 채용 사이트(사람인/잡코리아) | 명세 제출물 | — | 파일명 확인 | ⬜ |
@@ -128,5 +128,7 @@
 | R-8 | 압축 해제 도구에 따라 ZIP 안 `gradlew`의 실행 권한이 빠지면 README의 `./gradlew`가 실패(실격 조건 1) | SKILL 명령으로 만든 시험 ZIP에서 `-rwxr-xr-x` 저장·`unzip` 후 유지 확인(S12). `zipinfo` 점검(13단계), README에 `chmod +x gradlew` 안내(12단계 실측) |
 | R-9 | 명세 "Java 17 이상"에 상한이 없는데 JDK 27에서 `compileJava`가 실패했다(Lombok 1.18.46, S11 실측) | 해결(S12, 사용자 결정): `ext['lombok.version'] = '1.18.48'` — JDK 17·21·27 `clean build` 통과(저장소), 25·26은 사본 실측(S11) |
 | R-10 | 도구가 프로젝트 루트에 `memory-bank/`(템플릿·파일 목록)를 다시 만들었다(S11, 09:22) — 커밋·ZIP에 섞일 수 있다 | 해결(S12, 사용자 결정): 폴더는 두고 `.gitignore`와 SKILL ZIP 제외 목록에 추가, `git check-ignore`·시험 ZIP으로 확인 |
+| R-11 | 채점자 셸에 다른 제출물용 `JWT_SECRET`(흔한 이름)이 남아 있으면 형식 검사(Base64·32바이트)로 README 실행 명령이 기동에 실패한다(실격 조건 1, S13 실측) | 해결(S13): 환경 변수를 이 프로젝트 전용 `TODO_JWT_SECRET`으로 변경(D-06) — `JWT_SECRET`만 있으면 무시하고 기동·가입 201, 전용 이름에 잘못된 값이면 기동 실패, 올바른 값이면 기동·가입 201 |
+| R-12 | 이 PC(macOS)에서는 README의 Windows 명령(`.\gradlew.bat`)과 Linux 실행을 확인할 수 없다(D-18) | 해결(S13, 사용자 결정): GitHub Actions에서 Windows·Linux·macOS × JDK 17·21로 테스트·실행·API 호출 실측 — 6개 조합 성공(run 40277959532). README 명령을 바꾸면 CI 스모크도 맞춘다(`docs.md`) |
 
 해결됨(2026-10-25): 원문 명세 확보·대조, Lombok·springdoc 유지 결정, `memory-bank/` 삭제, Git 저장소 초기화와 원격 연결.
