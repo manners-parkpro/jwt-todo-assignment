@@ -14,8 +14,9 @@ spring:
     open-in-view: false
 
 auth:
-  # JWT 서명 키(Base64, 디코딩 32바이트 이상). 비워 두면 기동할 때 임의 키를 만들며, 재시작하면 기존 액세스 토큰은 무효가 된다
-  jwt-secret: ${JWT_SECRET:}
+  # JWT 서명 키(Base64, 디코딩 32바이트 이상). 비워 두면 기동할 때 임의 키를 만들며, 재시작하면 기존 액세스 토큰은 무효가 된다.
+  # 흔한 이름(JWT_SECRET)은 다른 프로젝트용 값이 셸에 남아 있으면 형식 검사로 기동이 실패할 수 있어 이 프로젝트 전용 이름을 쓴다
+  jwt-secret: ${TODO_JWT_SECRET:}
   access-token-ttl: 1h
   # 리프레시 토큰은 DB에 해시로 저장하는 불투명 토큰이라 서명 키와 무관하다 — 서버를 재시작해도 재발급에 쓸 수 있다
   refresh-token-ttl: 7d

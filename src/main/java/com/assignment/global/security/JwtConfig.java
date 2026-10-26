@@ -45,8 +45,8 @@ public class JwtConfig {
 
 	private static byte[] keyBytes(String jwtSecret) {
 		if (jwtSecret.isBlank()) {
-			// 채점 환경에서 JWT_SECRET을 빠뜨려도 실행되도록 고정 키 대신 임의 키를 만든다
-			log.warn("JWT_SECRET이 설정되지 않아 임의 서명 키를 생성했습니다. 서버를 재시작하면 기존 액세스 토큰은 무효가 됩니다.");
+			// 채점 환경에서 TODO_JWT_SECRET을 빠뜨려도 실행되도록 고정 키 대신 임의 키를 만든다
+			log.warn("TODO_JWT_SECRET이 설정되지 않아 임의 서명 키를 생성했습니다. 서버를 재시작하면 기존 액세스 토큰은 무효가 됩니다.");
 			byte[] key = new byte[MIN_KEY_BYTES];
 			new SecureRandom().nextBytes(key);
 			return key;
@@ -55,10 +55,10 @@ public class JwtConfig {
 		try {
 			key = Base64.getDecoder().decode(jwtSecret.trim());
 		} catch (IllegalArgumentException e) {
-			throw new IllegalStateException("JWT_SECRET은 Base64 문자열이어야 합니다.");
+			throw new IllegalStateException("TODO_JWT_SECRET은 Base64 문자열이어야 합니다.");
 		}
 		if (key.length < MIN_KEY_BYTES) {
-			throw new IllegalStateException("JWT_SECRET은 Base64로 디코딩한 결과가 32바이트 이상이어야 합니다(HS256).");
+			throw new IllegalStateException("TODO_JWT_SECRET은 Base64로 디코딩한 결과가 32바이트 이상이어야 합니다(HS256).");
 		}
 		return key;
 	}
