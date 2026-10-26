@@ -43,6 +43,32 @@ public abstract class IntegrationTestSupport {
 						""".formatted(refreshToken)));
 	}
 
+	// 선택 기능 테스트용: 정한 username·비밀번호로 가입·로그인해 토큰 쌍을 돌려준다(필수 테스트용 도우미는 그대로 둔다)
+	protected Tokens signupAndLoginAs(String username, String password) throws Exception {
+		mockMvc.perform(post("/users/signup")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(credentials(username, password)))
+				.andExpect(status().isCreated());
+		String loginResponse = login(username, password)
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		return new Tokens(
+				JsonPath.read(loginResponse, "$.access_token"),
+				JsonPath.read(loginResponse, "$.refresh_token"));
+	}
+
+	protected ResultActions login(String username, String password) throws Exception {
+		return mockMvc.perform(post("/users/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(credentials(username, password)));
+	}
+
+	private static String credentials(String username, String password) {
+		return """
+				{"username": "%s", "password": "%s"}
+				""".formatted(username, password);
+	}
+
 	private String signupAndLoginResponse() throws Exception {
 		String credentials = """
 				{"username": "user-%s", "password": "password1234"}

@@ -36,17 +36,19 @@ class ApiDocsTest extends IntegrationTestSupport {
 			requiresBearer.put(method.toUpperCase() + " " + path, bearerRequired);
 		}));
 
-		assertThat(requiresBearer).isEqualTo(Map.of(
-				"POST /users/signup", false,
-				"POST /users/login", false,
-				"POST /users/refresh", false,
-				"GET /users/me", true,
-				"POST /todos", true,
-				"GET /todos", true,
-				"GET /todos/search", true,
-				"GET /todos/{id}", true,
-				"PUT /todos/{id}", true,
-				"DELETE /todos/{id}", true));
+		// Map.of는 10쌍까지만 받으므로 API 수에 제한이 없는 ofEntries로 적는다
+		assertThat(requiresBearer).isEqualTo(Map.ofEntries(
+				Map.entry("POST /users/signup", false),
+				Map.entry("POST /users/login", false),
+				Map.entry("POST /users/refresh", false),
+				Map.entry("GET /users/me", true),
+				Map.entry("PUT /users/me", true),
+				Map.entry("POST /todos", true),
+				Map.entry("GET /todos", true),
+				Map.entry("GET /todos/search", true),
+				Map.entry("GET /todos/{id}", true),
+				Map.entry("PUT /todos/{id}", true),
+				Map.entry("DELETE /todos/{id}", true)));
 	}
 
 	@Test

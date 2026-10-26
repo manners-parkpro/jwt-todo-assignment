@@ -3,6 +3,7 @@ package com.assignment.global.error;
 import com.assignment.todo.application.TodoNotFoundException;
 import com.assignment.user.application.DuplicateUsernameException;
 import com.assignment.user.application.InvalidCredentialsException;
+import com.assignment.user.application.InvalidCurrentPasswordException;
 import com.assignment.user.application.InvalidRefreshTokenException;
 import com.assignment.user.application.UserNotFoundException;
 import com.fasterxml.jackson.databind.BeanDescription;
@@ -44,6 +45,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(DuplicateUsernameException.class)
 	ResponseEntity<ProblemDetail> handleDuplicateUsername(DuplicateUsernameException e) {
 		return problem(HttpStatus.CONFLICT, e.getMessage());
+	}
+
+	// 토큰은 유효하고 본문의 현재 비밀번호만 틀렸다 — 401은 토큰 문제를 뜻해 클라이언트가 재발급을 시도하므로 400으로 응답한다
+	@ExceptionHandler(InvalidCurrentPasswordException.class)
+	ResponseEntity<ProblemDetail> handleInvalidCurrentPassword(InvalidCurrentPasswordException e) {
+		return problem(HttpStatus.BAD_REQUEST, e.getMessage());
 	}
 
 	@ExceptionHandler({InvalidCredentialsException.class, InvalidRefreshTokenException.class})

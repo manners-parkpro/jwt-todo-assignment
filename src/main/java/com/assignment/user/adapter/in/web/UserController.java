@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -36,5 +37,12 @@ class UserController {
 	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 	UserResponse me(@CurrentUserId Long userId) {
 		return UserResponse.from(userUseCase.getMe(userId));
+	}
+
+	@PutMapping("/me")
+	@Operation(summary = "회원정보 수정", description = "current_password를 확인한 뒤 username과 비밀번호(new_password, 선택)를 바꾼다. 비밀번호를 바꾸면 그 사용자의 refresh_token이 모두 폐기된다")
+	@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+	UserResponse updateMe(@CurrentUserId Long userId, @Valid @RequestBody UpdateUserRequest request) {
+		return UserResponse.from(userUseCase.updateMe(request.toCommand(userId)));
 	}
 }
