@@ -106,6 +106,13 @@ class UserUpdateTest extends IntegrationTestSupport {
 				""".formatted(username, PASSWORD))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errors[*].message").value(hasItem("새 비밀번호는 공백만으로 이뤄질 수 없습니다.")));
+		// 25자라 글자 수 규칙은 통과하지만 UTF-8로 75바이트라, 막지 않으면 bcrypt가 해시하다 예외(500)를 던진다
+		updateMe(tokens.accessToken(), """
+				{"username": "%s", "current_password": "%s", "new_password": "%s"}
+				""".formatted(username, PASSWORD, "가".repeat(25)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errors[0].field").value("new_password"))
+				.andExpect(jsonPath("$.errors[0].message").value("새 비밀번호는 UTF-8 기준 72바이트 이하여야 합니다."));
 		updateMe(tokens.accessToken(), """
 				{"username": "%s"}
 				""".formatted(username))
