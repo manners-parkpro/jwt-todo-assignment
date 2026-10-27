@@ -1,7 +1,7 @@
 ---
 name: submission-check
 description: 과제 최종 제출 전 검증(클린 빌드·JDK 17 테스트·실행 스모크·스키마·정적 점검·문서)과 제출 ZIP 생성, 최종 보고. 사용자가 직접 실행한다.
-argument-hint: "<이름>"
+argument-hint: "<이름> (예: 홍길동 → 홍길동_springboot.zip)"
 disable-model-invocation: true
 ---
 
@@ -33,9 +33,9 @@ disable-model-invocation: true
    - 버전: `build.gradle`의 Boot 3.5.x·`options.release = 17`·`tomcat.version`, `gradle-wrapper.properties`의 9.8.2
 5. **문서**: README 필수 섹션(`.claude/rules/docs.md`)이 있고 명령이 실측과 일치하는지, `prompts/used_prompts.md`가 최신 작업까지 기록됐는지 확인한다.
 6. **기록**: 체크리스트(SUB-xx 포함)·`docs/progress.md`·`prompts/used_prompts.md`(이번 점검 항목 포함)를 ZIP 전에 갱신한다 — 제출물에 최신 기록이 들어가야 한다.
-7. **ZIP** — ZIP 구성(`.git/` 포함 여부, 최상위 폴더 유무)을 먼저 사용자에게 확인한다(아래 명령은 `.git/` 제외·최상위 폴더 포함이 기본). 프로젝트 상위 폴더에 압축한다.
+7. **ZIP** — ZIP 구성(`.git/` 포함 여부, 최상위 폴더 유무)을 먼저 사용자에게 확인한다(아래 명령은 `.git/` 제외·최상위 폴더 포함이 기본). 프로젝트 상위 폴더에 압축한다. 인자로 파일명 전체(`홍길동_springboot.zip`)를 받아도 접미사가 두 번 붙지 않게 이름 부분만 쓴다(S18).
    ```bash
-   P="$(basename "$PWD")"; N="$ARGUMENTS"
+   A="$ARGUMENTS"; P="$(basename "$PWD")"; N="${A%_springboot.zip}"
    cd .. && zip -rq "${N}_springboot.zip" "$P" \
      -x "$P/build/*" "$P/target/*" "$P/.gradle/*" "$P/out/*" "$P/bin/*" "$P/.idea/*" "$P/.vscode/*" "$P/.git/*" \
         "*.db" "*.db-*" "*.iml" "*.DS_Store" "$P/.env*" "$P/.claude/settings.local.json" "$P/.claude/*.jsonl" "$P/HELP.md" \

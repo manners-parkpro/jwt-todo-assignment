@@ -37,7 +37,7 @@ paths:
 - 선택 API(OPT-01~03, D-21 — S15 구현). 검색은 ASCII 대소문자를 구분하지 않고 `%`·`_`를 문자 그대로 찾는다. 수정은 현재 비밀번호를 먼저 확인한다(틀리면 400 — 401은 토큰 문제에만 쓴다). 탈퇴한 계정의 로그인·재발급은 401, 남은 액세스 토큰의 `/users/me`는 404, 같은 username 재가입은 409다.
 
 - Todo = `{id, title, description, completed}`. 생성 시 `completed`는 `false`. 비밀번호(해시)·소유자 정보·토큰 해시는 어떤 응답에도 넣지 않는다.
-- 입력 검증: 가입 `username` 필수·50자 이하, `password` 8~64자·UTF-8 72바이트 이하 / 로그인 `username`·`password` 필수(가입 규칙은 검사하지 않는다 — 틀리면 401) / `refresh_token` 필수 / `title` 필수·공백 불가·100자 이하 / `description` 1,000자 이하 / `completed`는 PUT에서 필수.
+- 입력 검증: 가입 `username` 필수·50자 이하, `password` 필수·8~64자·UTF-8 72바이트 이하 / 로그인 `username`·`password` 필수(가입 규칙은 검사하지 않는다 — 틀리면 401) / `refresh_token` 필수 / `title` 필수·100자 이하, `description` 1,000자 이하(생성·수정 같음) / `completed`는 PUT에서 필수 / 회원정보 수정 `username` 필수·50자 이하, `current_password` 필수, `new_password`는 보냈을 때만 가입 비밀번호 규칙. 문자열의 "필수"는 `@NotBlank`라 공백만 있어도 400이다 — README 검증 규칙 표도 같은 기준으로 적는다(S18 실측).
 - 검증 메시지는 어노테이션에 고정한 한국어로 쓴다 — 기본 메시지는 요청 `Accept-Language`·JVM 로캘에 따라 바뀐다. 실패 응답은 `errors: [{field, message}]`이고, `field`는 클라이언트가 보낸 JSON 이름이다(`refresh_token` — 자바 이름 `refreshToken`을 `GlobalExceptionHandler`가 Jackson 정보로 바꾼다).
 - 재발급 실패(없는 토큰·만료·이미 쓴 토큰)는 모두 같은 401과 detail("리프레시 토큰이 유효하지 않습니다.")이다. 토큰 응답에는 Spring Security 기본 헤더(`Cache-Control: no-cache, no-store, max-age=0, must-revalidate`)가 붙는다(S12 실측).
 - `GET /users/me`에서 토큰은 유효하지만 사용자가 없으면 404다.

@@ -130,13 +130,15 @@ TODO는 `{"id":1,"title":"Write README","description":"check every command","com
 
 | 요청 | 필드 | 규칙 |
 |---|---|---|
-| 회원가입 | `username`, `password` | `username` 필수·50자 이하. `password` 8~64자, UTF-8 기준 72바이트 이하 |
+| 회원가입 | `username`, `password` | `username` 필수·50자 이하. `password` 필수·8~64자, UTF-8 기준 72바이트 이하 |
 | 로그인 | `username`, `password` | 둘 다 필수. 값이 틀리면 401 |
 | 토큰 재발급 | `refresh_token` | 필수 |
-| TODO 생성 | `title`, `description` | `title` 필수(공백만은 안 됨)·100자 이하. `description`은 선택, 1,000자 이하 |
-| TODO 수정 | `title`, `description`, `completed` | 전체 교체라 `title`·`completed` 필수. `description`을 빼면 `null`로 바뀐다 |
-| 회원정보 수정 | `username`, `current_password`, `new_password` | `username`·`current_password` 필수. `new_password`는 선택이며 가입 비밀번호와 같은 규칙. 현재 비밀번호가 틀리면 400 |
+| TODO 생성 | `title`, `description` | `title` 필수·100자 이하. `description`은 선택, 1,000자 이하 |
+| TODO 수정 | `title`, `description`, `completed` | 전체 교체라 `title`·`completed` 필수. 길이 규칙은 TODO 생성과 같다. `description`을 빼면 `null`로 바뀐다 |
+| 회원정보 수정 | `username`, `current_password`, `new_password` | `username`·`current_password` 필수, `username`은 50자 이하. `new_password`는 선택이며 가입 비밀번호와 같은 규칙. 현재 비밀번호가 틀리면 400 |
 | 제목 검색 | 쿼리 `keyword` | 필수·100자 이하. 영문 대소문자를 구분하지 않고, `%`·`_`도 글자 그대로 찾는다 |
+
+문자열 값의 "필수"는 값이 없거나, 비어 있거나, 공백만 있으면 400이라는 뜻이다(`completed`는 값이 없으면 400).
 
 탈퇴하면 그 사용자의 TODO와 리프레시 토큰이 삭제된다. 탈퇴한 계정은 로그인할 수 없고(401), 같은 username으로 다시 가입할 수도 없다(409).
 
