@@ -3,9 +3,9 @@
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
 ## 현재 상태 — 2026-10-27
-- **단계: 13단계(최종 점검) 완료 → 제출 ZIP 생성(사용자 지시 #16 GOAL 3).** 점검·독립 리뷰 반영·재검증을 마쳤고, 이 기록을 커밋한 뒤 SKILL 명령으로 `<이름>_springboot.zip`을 프로젝트 상위 폴더에 만든다(`.git/` 제외·최상위 폴더 `assignment/` 포함 — 사용자 결정). 사용자 지시(#14)로 11단계를 10단계보다 먼저 했다. 설계 승인은 2026-10-25(used_prompts #2).
+- **단계: 13단계 완료 — 제출 ZIP 생성·검증 완료(S18). 남은 일은 사용자가 채용 사이트에 업로드하는 것뿐이다.** 제출 ZIP은 커밋 `bc778a7`(CI run 40475001968 성공)에서 SKILL 명령으로 만든 프로젝트 상위 폴더의 `<이름>_springboot.zip`이다(`.git/` 제외·최상위 폴더 `assignment/` 포함 — 사용자 결정). 그 뒤 커밋은 이 기록 갱신뿐이다. 사용자 지시(#14)로 11단계를 10단계보다 먼저 했다. 설계 승인은 2026-10-25(used_prompts #2).
 - README(S17·S18): 명세 4항목(스택·실행·테스트·API 목록)과 인증·검증 규칙·오류 응답·Swagger UI·curl 예시·구조. Gradle 명령은 CI로 3개 OS × JDK 17·21(Windows는 기본 셸 PowerShell 5.1), curl 예시는 Linux·macOS(bash·zsh)에서 적힌 그대로 실행해 확인한다. S18에 검증 규칙 표를 코드와 일치시켰다(리뷰 반영, 실서버 18건 실측).
-- 빌드·테스트: JDK 17·21 `clean build` 45건 통과(S18 — 필수 TEST-01~04, 확장 07·08·09, 선택 X1·X2·X3·X4, API-10, OPT-01~03). 시험 ZIP 2개를 풀어 README 명령 그대로 전체 실측(S18, 두 번째는 한글·공백 경로). CI — 12단계 커밋 `1c271a6`(run 40442195752)·`b50d0b2`(run 40442593113) 6개 조합 성공: Windows(PowerShell 5.1)·Linux·macOS × JDK 17·21 테스트 실행, `bootRun` 스모크 15회, 8080 사용 중 다른 포트 스모크 15회, README curl 예시(Linux·macOS) 상태 16개 일치, 경고·오류 0.
+- 빌드·테스트: JDK 17·21 `clean build` 45건 통과(S18 — 필수 TEST-01~04, 확장 07·08·09, 선택 X1·X2·X3·X4, API-10, OPT-01~03). 시험 ZIP 2개를 풀어 README 명령 그대로 전체 실측(S18, 두 번째는 한글·공백 경로). CI — `1c271a6`(run 40442195752)·`b50d0b2`(run 40442593113)·`bc778a7`(run 40475001968, 제출 ZIP의 커밋) 6개 조합 성공: Windows(PowerShell 5.1)·Linux·macOS × JDK 17·21 테스트 실행, `bootRun` 스모크 15회, 8080 사용 중 다른 포트 스모크 15회, README curl 예시(Linux·macOS) 상태 16개 일치, 경고·오류 0.
 - 사용자 결정(S12·S13): Lombok 1.18.48(JDK 27 실격 위험 해결), 정기 교차 확인 JDK는 17·21, `memory-bank/`는 로컬에 두고 Git·ZIP에서만 제외, TTL은 yml 유지, Windows·Linux는 GitHub Actions로 실측. 서명 키 환경 변수는 `TODO_JWT_SECRET`(S13 — 흔한 이름 충돌로 기동 실패하는 위험 보강).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
@@ -24,7 +24,7 @@
 10. [x] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04 (검증: S16, 11단계 뒤에 진행)
 11. [x] 선택 기능 OPT-01~03 구현 — D-21, OPT-01 → 02 → 03 순서로 기능마다 `[OPT-0x]` 테스트·TEST-01~04 회귀·`ApiDocsTest` 목록 갱신 (검증: S15, 사용자 지시로 10단계보다 먼저)
 12. [x] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령 — CI로 3개 OS × JDK 17·21 확인, SQL 명령 없음, 8080 포트 사용 중일 때의 실행 방법 실측), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18 (검증: S17)
-13. [x] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08(리뷰 지적으로 SEC-03·07·TEST-05·D-17 서술도 정리) (검증: S18 — 제출 ZIP은 이 기록을 커밋한 뒤 생성·검증)
+13. [x] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08(리뷰 지적으로 SEC-03·07·TEST-05·D-17 서술도 정리) (검증: S18 — 제출 ZIP 생성·검증 완료, 업로드는 사용자)
 
 ## 환경 메모
 - JDK: 이 PC 기본은 Corretto 21.0.10. 기본 검증은 OpenJDK 17.0.18이며, 셸 환경 변수가 Bash 호출마다 초기화되므로 명령마다 `JAVA_HOME=$(/usr/libexec/java_home -v 17)`을 붙인다. `java -version`은 PATH 앞쪽의 Corretto 21을 가리키므로 사용 JDK는 `./gradlew --version`의 Launcher JVM으로 확인한다. 단계 완료 시 21로 교차 확인. 전역 Gradle 없음 → `./gradlew`만 사용
@@ -54,8 +54,14 @@
   - ③ 이전 실행 로그의 "Started" 줄을 대기 스크립트가 읽어 서버 기동 전에 호출(경쟁 조건, 전부 000) → 기동 전에 로그 삭제
   - ④ macOS bash 3.2가 바깥 큰따옴표 안 `$(…)`의 JSON `{…,…}`를 brace expansion으로 둘로 나눠 가입 400 → 상태 코드를 변수에 먼저 받음. README 예시는 대입 형태라 해당 없음(bash 3.2·5.2·zsh에서 16개 일치)
   - ⑤ 디버그 출력을 `head`로 자르다 SIGPIPE로 스크립트가 끝나 서버 1개가 남았고 다음 기동이 8080 충돌 → 그 서버를 중지 파일로 Ctrl+C 종료, 포트·프로세스 0 확인 뒤 재실행
-- 커밋: `a1f88dc`(README 검증 규칙·`api.md`·SKILL), 이 기록 커밋
-- 다음: 제출 ZIP 생성·검증(사용자 지시 #16 GOAL 3) → 사용자가 채용 사이트에 업로드
+- 커밋: `a1f88dc`(README 검증 규칙·`api.md`·SKILL), `bc778a7`(기록). CI run 40475001968(`bc778a7`) 6개 조합 성공 — README 예시 16개 일치(macOS bash·zsh, Ubuntu bash), 스모크 8080·8081 각 6/6, 모든 작업에서 테스트 실행, PowerShell 5.1 단계 8개, 경고·오류 0
+- 제출 ZIP(GOAL 3, `final-zip.sh` — CI 성공 확인 뒤): 작업 트리 깨끗·HEAD = `origin/main` = `bc778a7` 확인 → SKILL 7단계 명령 그대로 프로젝트 상위 폴더에 `<이름>_springboot.zip` 생성
+  - SKILL 확인: 제외 대상 0건, 필수 파일 목록, `gradlew` `-rwxr-xr-x`, `used_prompts.md` 끝이 #16
+  - 파일명 NFC(조합형), 265,315바이트, SHA-256 `511add7b…a01a`
+  - 파일 117개 = Git 추적 116 + 명세 사본, 내용 = `bc778a7` 체크아웃(시험 ZIP 2와는 기록 파일 4개만 다름)
+  - 풀어서(한글·공백 경로) 전체 실측: 시험 ZIP과 같은 항목 모두 통과
+- 실패·오류와 원인(이어서): ⑥ ZIP과 HEAD의 CRC 대조에서 `gradlew.bat` 1건 불일치 — `.gitattributes`(`*.bat text eol=crlf`)로 blob은 LF, 체크아웃·ZIP은 CRLF라서 생긴 대조 방법의 오탐. ZIP = 작업 트리 파일 = blob을 CRLF로 바꾼 것(112줄)으로 확인
+- 다음: 사용자가 채용 사이트(사람인/잡코리아)에 업로드
 
 ### 2026-10-27 · S17 12단계 README 작성·명령 실측, 작성 뒤 전체 재검증 — 사용자 지시 #15
 - 작성(커밋 `6d0a20e` README, `1c271a6` CI):
