@@ -8,24 +8,29 @@ import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// Calls the core APIs of a server started with the README run command (./gradlew bootRun, .\gradlew.bat bootRun).
-// CI runs this file with the JDK single-file launcher (java ReadmeSmoke.java) on Windows, Linux and macOS.
+// Calls every API listed in the README on a server started with a README run command
+// (./gradlew bootRun, .\gradlew.bat bootRun, or the other-port command with its base URL as the first argument).
+// CI runs this file with the JDK single-file launcher (java ReadmeSmoke.java [base URL]) on Windows, Linux and macOS.
 // The source stays ASCII-only: JDK 17 on Windows reads it with the platform encoding (windows-1252),
 // so the expected Korean message is written with unicode escapes.
 public class ReadmeSmoke {
 
-	private static final String BASE_URL = "http://localhost:8080";
 	private static final Duration STARTUP_TIMEOUT = Duration.ofMinutes(4);
 	private static final String TODO_NOT_FOUND = "TODO\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.";
 	private static final HttpClient CLIENT = HttpClient.newHttpClient();
 
+	private static String baseUrl = "http://localhost:8080";
+
 	public static void main(String[] args) throws Exception {
+		if (args.length > 0) {
+			baseUrl = args[0];
+		}
 		waitForServer();
-		String credentials = "{\"username\":\"ci-" + System.currentTimeMillis() + "\",\"password\":\"password1234\"}";
+		String username = "ci-" + System.currentTimeMillis();
 
 		// Signup, login and the TODO calls succeed only if the users, todos and refresh_tokens tables were created at startup
-		expect("POST /users/signup", send("POST", "/users/signup", credentials, null), 201);
-		Response login = expect("POST /users/login", send("POST", "/users/login", credentials, null), 200);
+		expect("POST /users/signup", send("POST", "/users/signup", credentials(username, "password1234"), null), 201);
+		Response login = expect("POST /users/login", send("POST", "/users/login", credentials(username, "password1234"), null), 200);
 		String accessToken = stringField(login.body(), "access_token");
 		String refreshToken = stringField(login.body(), "refresh_token");
 		expect("GET /users/me", send("GET", "/users/me", null, accessToken), 200);
@@ -34,6 +39,12 @@ public class ReadmeSmoke {
 		Response created = expect("POST /todos", send("POST", "/todos", "{\"title\":\"ci\"}", accessToken), 201);
 		String todoId = numberField(created.body(), "id");
 		expect("GET /todos", send("GET", "/todos", null, accessToken), 200);
+		expect("GET /todos/{id}", send("GET", "/todos/" + todoId, null, accessToken), 200);
+		// The keyword differs in case from the title: the search ignores ASCII case on every platform's SQLite library
+		Response found = expect("GET /todos/search", send("GET", "/todos/search?keyword=CI", null, accessToken), 200);
+		if (!found.body().contains("\"id\":" + todoId + ",")) {
+			throw new AssertionError("Search result does not contain the created TODO");
+		}
 		expect("PUT /todos/{id}", send("PUT", "/todos/" + todoId, "{\"title\":\"ci done\",\"completed\":true}", accessToken), 200);
 		expect("DELETE /todos/{id}", send("DELETE", "/todos/" + todoId, null, accessToken), 204);
 		Response notFound = expect("GET /todos/{id} after delete", send("GET", "/todos/" + todoId, null, accessToken), 404);
@@ -41,8 +52,18 @@ public class ReadmeSmoke {
 			throw new AssertionError("Korean detail message is not intact: " + notFound.body());
 		}
 
-		expect("POST /users/refresh", send("POST", "/users/refresh", "{\"refresh_token\":\"" + refreshToken + "\"}", null), 200);
-		System.out.println("README smoke check passed");
+		Response refreshed = expect("POST /users/refresh",
+				send("POST", "/users/refresh", "{\"refresh_token\":\"" + refreshToken + "\"}", null), 200);
+		String refreshedAccessToken = stringField(refreshed.body(), "access_token");
+		String update = "{\"username\":\"" + username + "\",\"current_password\":\"password1234\",\"new_password\":\"password5678\"}";
+		expect("PUT /users/me", send("PUT", "/users/me", update, refreshedAccessToken), 200);
+		expect("DELETE /users/me", send("DELETE", "/users/me", null, refreshedAccessToken), 204);
+		expect("POST /users/login after withdrawal", send("POST", "/users/login", credentials(username, "password5678"), null), 401);
+		System.out.println("README smoke check passed: " + baseUrl);
+	}
+
+	private static String credentials(String username, String password) {
+		return "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}";
 	}
 
 	private static void waitForServer() throws InterruptedException {
@@ -61,7 +82,7 @@ public class ReadmeSmoke {
 	}
 
 	private static Response send(String method, String path, String json, String accessToken) throws Exception {
-		HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(BASE_URL + path)).timeout(Duration.ofSeconds(30));
+		HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + path)).timeout(Duration.ofSeconds(30));
 		if (accessToken != null) {
 			builder.header("Authorization", "Bearer " + accessToken);
 		}

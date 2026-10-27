@@ -1,4 +1,5 @@
-# README에 적은 명령(macOS/Linux는 ./gradlew, Windows는 .\gradlew.bat)을 세 운영체제와 JDK 17·21에서 그대로 실행해 확인한다
+# README에 적은 명령(macOS/Linux는 ./gradlew, Windows는 .\gradlew.bat)을 세 운영체제와 JDK 17·21에서, curl 예시는 README가 대상으로 하는 Linux·macOS에서 그대로 실행해 확인한다
+# Windows 단계는 Windows에 기본으로 들어 있는 Windows PowerShell 5.1(shell: powershell)로 실행한다 — 채점자가 PowerShell을 열면 기본으로 뜨는 셸이다
 name: CI
 
 on:
@@ -34,7 +35,7 @@ jobs:
         run: ./gradlew test
       - name: 테스트 — .\gradlew.bat test
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: powershell
         run: .\gradlew.bat test
 
       # todo.db가 없는 상태에서 실행 명령만으로 서버를 띄우고, 테이블이 생겨야 성공하는 API를 호출한다
@@ -47,17 +48,41 @@ jobs:
           sqlite3 todo.db '.schema'
       - name: 실행 — .\gradlew.bat bootRun 후 API 확인
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: powershell
         run: |
           Remove-Item todo.db -ErrorAction SilentlyContinue
           Start-Process -FilePath .\gradlew.bat -ArgumentList 'bootRun' -NoNewWindow -RedirectStandardOutput bootrun.log -RedirectStandardError bootrun-error.log
           java .github/ci/ReadmeSmoke.java
           if (-not (Test-Path todo.db)) { throw 'todo.db was not created' }
 
+      # README "요청 예시 (curl)"의 명령을 적힌 그대로 실행해, 응답 상태 코드가 README에 적은 값과 같은지 비교한다(macOS는 기본 셸 zsh로도)
+      - name: README 요청 예시 — bash
+        if: runner.os != 'Windows'
+        run: bash .github/ci/readme-examples.sh bash
+      - name: README 요청 예시 — zsh
+        if: runner.os == 'macOS'
+        run: bash .github/ci/readme-examples.sh zsh
+
+      # 위 서버가 8080을 쓰는 상태에서 README "실행이 안 될 때"의 다른 포트 실행 명령을 그대로 실행한다
+      - name: 실행 — 8080 사용 중일 때 --args='--server.port=8081'
+        if: runner.os != 'Windows'
+        run: |
+          ./gradlew bootRun --args='--server.port=8081' > bootrun-8081.log 2>&1 &
+          java .github/ci/ReadmeSmoke.java http://localhost:8081
+      - name: 실행 — 8080 사용 중일 때 "--args=--server.port=8081" (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          # 사용자가 PowerShell에 입력한 것과 같은 구문 분석을 거치도록 스크립트 블록 안에 README 명령을 그대로 둔다
+          # (Windows PowerShell 5.1의 Start-Job에는 -WorkingDirectory가 없어 작업 안에서 위치를 옮긴다)
+          $repo = $PWD.Path
+          Start-Job -ScriptBlock { Set-Location $using:repo; .\gradlew.bat bootRun "--args=--server.port=8081" *> bootrun-8081.log }
+          java .github/ci/ReadmeSmoke.java http://localhost:8081
+
       # Windows는 실행 중인 서버(Gradle 데몬)가 캐시 잠금 파일을 쥐고 있어 작업 뒤 캐시 저장(tar)이 실패한다 — 실패한 작업도 로그를 보관하기 전에 멈춘다
       - name: 서버 종료
         if: always() && runner.os == 'Windows'
-        shell: pwsh
+        shell: powershell
         run: Stop-Process -Name java -Force -ErrorAction SilentlyContinue
 
       - name: 실패 시 로그 보관
