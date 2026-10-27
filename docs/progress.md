@@ -2,11 +2,10 @@
 
 > "현재 상태"와 "다음 작업"은 항상 최신으로 유지한다. 세션 로그는 맨 위에 추가하고, 약 150줄을 넘으면 오래된 로그를 요약한다.
 
-## 현재 상태 — 2026-10-26
-- **단계: 11단계(선택 기능)·10단계(추가 테스트) 완료 → 사용자 확인 후 12단계(README).** 사용자 지시(#14)로 11단계를 10단계보다 먼저 했다. 설계 승인은 2026-10-25(used_prompts #2).
-- **제출 전 남은 실격 위험: `README.md`가 아직 없다(12단계).** README에 적을 명령(`./gradlew test`·`./gradlew bootRun`, Windows `.\gradlew.bat …`)은 CI로 3개 OS × JDK 17·21 실측을 마쳤다.
-- **제출 전 남은 실격 위험: `README.md`가 아직 없다(12단계).** 지금 제출하면 실격 조건 1("README에 적힌 명령어로 실행되지 않는 경우")에 해당한다. README에 적을 명령은 CI로 3개 OS × JDK 17·21 실측을 마쳤다.
-- 빌드·테스트: JDK 17·21 `clean build` 45건 통과(S16 — 필수 TEST-01~04, 확장 07·08·09, 선택 X1·X2·X3·X4, API-10, OPT-01~03). 2회 연속·무작위 순서 실행 통과. CI(GitHub Actions) Windows·Linux·macOS × JDK 17·21 — 10단계 커밋 `db98c0d`까지 모두 성공.
+## 현재 상태 — 2026-10-27
+- **단계: 12단계(README) 완료 → 사용자 확인 후 13단계 `/submission-check <이름>`(최종 점검·제출 ZIP).** 사용자 지시(#14)로 11단계를 10단계보다 먼저 했다. 설계 승인은 2026-10-25(used_prompts #2).
+- README(S17): 명세 4항목(스택·실행·테스트·API 목록)과 인증·오류 응답·Swagger UI·curl 예시·구조. Gradle 명령은 CI로 3개 OS × JDK 17·21(Windows는 기본 셸 PowerShell 5.1), curl 예시는 Linux·macOS(bash·zsh)에서 적힌 그대로 실행해 확인한다. 제출 전 남은 절차는 최종 ZIP 생성·점검(13단계)이다.
+- 빌드·테스트: JDK 17·21 `clean build` 45건 통과(S17 — 필수 TEST-01~04, 확장 07·08·09, 선택 X1·X2·X3·X4, API-10, OPT-01~03). CI — 12단계 커밋 `1c271a6`(run 40442195752) 6개 조합 성공: Windows(PowerShell 5.1)·Linux·macOS × JDK 17·21 테스트 실행, `bootRun` 스모크 15회, 8080 사용 중 다른 포트 스모크 15회, README curl 예시(Linux·macOS) 상태 16개 일치, 경고·오류 0.
 - 사용자 결정(S12·S13): Lombok 1.18.48(JDK 27 실격 위험 해결), 정기 교차 확인 JDK는 17·21, `memory-bank/`는 로컬에 두고 Git·ZIP에서만 제외, TTL은 yml 유지, Windows·Linux는 GitHub Actions로 실측. 서명 키 환경 변수는 `TODO_JWT_SECRET`(S13 — 흔한 이름 충돌로 기동 실패하는 위험 보강).
 - 코드 구조(S10, D-20): 유스케이스는 Result를 반환하고 웹 어댑터가 Response로 변환한다. 포트·어댑터 이름은 사용자가 지정한 참고 프로젝트 규칙(CommandPort·QueryPort, RepositoryAdapter)을 따른다.
 - 원격: 저장소 로컬 자격 증명 헬퍼로 푸시한다. 원격 커밋 작성자·커미터는 모두 noreply다.
@@ -24,7 +23,7 @@
 9. [x] springdoc 설정(보안 스키마, 보호 API 표시) → `/v3/api-docs` 확인 — API-10 (검증: S14)
 10. [x] 선택 테스트 TEST-X1·X3·X4(X2는 7단계), 2회 연속 실행, `./gradlew build` — SEC-05, TEST-06, ERR-04 (검증: S16, 11단계 뒤에 진행)
 11. [x] 선택 기능 OPT-01~03 구현 — D-21, OPT-01 → 02 → 03 순서로 기능마다 `[OPT-0x]` 테스트·TEST-01~04 회귀·`ApiDocsTest` 목록 갱신 (검증: S15, 사용자 지시로 10단계보다 먼저)
-12. [ ] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령 — CI로 3개 OS × JDK 17·21 확인, SQL 명령 없음, 8080 포트 사용 중일 때의 실행 방법 실측), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18
+12. [x] README 작성과 명령 실검증(최종 API 기준, macOS/Linux 실측 + Windows 표준 Wrapper 명령 — CI로 3개 OS × JDK 17·21 확인, SQL 명령 없음, 8080 포트 사용 중일 때의 실행 방법 실측), 클린 상태에서 README 명령으로 테이블 생성 최종 확인 — DOC-01~05, TECH-06·07, D-18 (검증: S17)
 13. [ ] `/submission-check <이름>` — SUB-01~06, SEC-09·10, DOC-06~08
 
 ## 환경 메모
@@ -34,6 +33,34 @@
 - 로컬 훅(설정은 `.claude/settings.local.json`): `log-prompt.py`(UserPromptSubmit → `.claude/prompt-history.jsonl`, `<task-notification>`·`<agent-message` 제외 — 그 전에 기록된 4건은 대조할 때 건너뜀), `log-instructions.py`(InstructionsLoaded → `.claude/instructions-log.jsonl`), `guard-git.py`(PreToolUse Bash — 커밋 때 JDK 17 테스트로 약 10초). 세션 중에 만든 에이전트·지침 파일은 그 세션에서 로드되지 않을 수 있다 — `step-reviewer`를 고를 수 없으면 같은 파일 내용으로 general-purpose 에이전트를 쓴다
 
 ## 세션 로그 (최신이 위)
+
+### 2026-10-27 · S17 12단계 README 작성·명령 실측, 작성 뒤 전체 재검증 — 사용자 지시 #15
+- 작성(커밋 `6d0a20e` README, `1c271a6` CI):
+  - `README.md`: 선택한 스택, 실행 방법(준비·서버 실행·JWT 서명 키·실행이 안 될 때), 테스트 실행 방법(필수 4종 ↔ 테스트 클래스), API 목록 요약(12개·검증 규칙·인증·오류 응답·Swagger UI), curl 요청 예시, 프로젝트 구조, 문서
+  - CI: `readme-examples.sh`(README 예시를 적힌 그대로 실행해 상태 코드 비교 + 붙여 넣기 함정 정적 검사), `ReadmeSmoke.java`가 README의 API를 모두 호출(15회)·주소 인자, `ci.yml`에 예시 단계(bash·macOS zsh)와 8080 사용 중 다른 포트 실행 단계, Windows 단계는 PowerShell 5.1로 전환
+  - 규칙·결정: `docs.md` README 규칙(코드 블록 주석 금지·특수 변수·`?` 따옴표, 예시 CI), D-18 보완, SKILL 정적 점검의 `sqlite3` 검사를 대소문자 구분으로 정정(스택 표의 "SQLite3"가 걸렸다)
+- 작성 전 실측(스크래치 `s17/`, 제출 ZIP 명령으로 만든 사본):
+  - 빈 Gradle 홈에서 `./gradlew test`: JDK 17 85초(배포판·의존성 내려받기 포함)·JDK 21 32초, 45건 통과, 루트 `todo.db` 없음. JDK 11·8을 `JAVA_HOME`으로 주면 "Gradle requires JVM 17 or later to run"
+  - 콘솔 메시지 출처: `Deprecated Gradle features…`는 Spring Boot Gradle 플러그인 `JavaPluginAction`의 `Configuration.setVisible`(Gradle 11 제거 예정, deprecation 스택), `Sharing is only supported…`는 Mockito 인라인 목 메이커(사본에서 subclass 목 메이커로 바꾸면 1줄 → 0줄)
+  - `./gradlew bootRun`(`todo.db` 없음): 7초 기동, 루트에 `todo.db`, 테이블 3개·인덱스 2개, WARN은 서명 키 안내 1건, 진행 표시 `80% EXECUTING`. 가상 터미널(pty)에서 Ctrl+C로 0.4초 종료(130)·포트 해제
+  - 8080 사용 중: "Port 8080 was already in use"로 BUILD FAILED → `--args='--server.port=8081'`로 기동, API 20회 기대 상태 일치
+  - 서명 키: 미설정이면 재시작 뒤 기존 액세스 토큰 401(Invalid signature)·재발급 200, `export TODO_JWT_SECRET=…` 뒤 재시작하면 200, Base64 아님·16바이트는 기동 실패(이유 출력)
+  - 실행 권한: `unzip`·`ditto`(Finder)·`tar`는 유지, Python `zipfile`은 제거 → zsh `permission denied`·bash `Permission denied`(126) → `chmod +x gradlew`로 해결
+  - 붙여 넣기 함정(기본 대화형 zsh — `/etc/zshrc`에 `interactivecomments` 없음): `#` → `command not found: #`·줄 끝 주석이 붙은 대입 미적용, `USERNAME` 대입 무시, 따옴표 없는 `?` → `no matches found`. bash는 모두 정상
+- 작성 뒤 검증(`final-sweep.sh` 2회 — 리뷰 반영 전·후, 매번 새 ZIP·새 사본):
+  - ZIP 제외 대상 0건·필수 파일 6/6·`gradlew` `-rwxr-xr-x`, JDK 17·21 `./gradlew test` 45건, `bootRun`만으로 `todo.db`·테이블 생성
+  - README 예시: bash 3.2·zsh 5.9 스크립트 실행과 기본 대화형 zsh·bash 붙여 넣기 모두 상태 16개 일치·셸 오류 0, `BASE`를 8081로 바꿔도 일치. 기대값을 바꾼 README, 주석·`!`·`USERNAME=`을 넣은 README는 검사가 실패(rc 1)
+  - `ReadmeSmoke` 15회·API 단언 37건(오류 경로 400·401·404·409 포함): 8080(JDK 17)·8081(JDK 21, 같은 폴더에서 동시 실행) 모두 통과
+  - Swagger UI(헤드리스 Chrome): 작업 12개·자물쇠 9개, 토큰만 Authorize → 내 정보 200·생성 201·검색 200, 승인 상태 로그인 200(Bearer 미전송)
+  - 서버 로그 ERROR 0·WARN 1(서명 키)·토큰·비밀번호 0, Ctrl+C로 두 서버 종료 뒤 포트·프로세스 0. 저장소 JDK 17·21 `clean build` 45건
+  - CI(`1c271a6`, run 40442195752): 6개 조합 성공. 모든 작업에서 `> Task :test` 실행, Linux·macOS `.schema` 테이블 3개, 스모크 8080·8081 각 6/6. README 예시 상태 16개 일치(Ubuntu bash 5.2, macOS bash 3.2·zsh 5.9). Windows 단계는 `WindowsPowerShell\v1.0\powershell.EXE`(5.1)로 실행돼 `"--args=--server.port=8081"` 서버 스모크도 통과. `##[warning]`·`##[error]` 0건
+- 실패·오류와 원인(끝까지 추적):
+  - ① Write 도구가 `ReadmeSmoke.java`의 `\uXXXX`를 한글로 바꿔 저장(S13과 같은 현상) → `file`로 발견해 이스케이프로 되돌리고 ASCII 확인
+  - ② pty 측정 첫 시도에서 Ctrl+C가 먹지 않음 — 측정 스크립트를 백그라운드(&)로 띄워 SIGINT 무시 상태가 JVM까지 이어졌다(측정 도구 문제). 자식에서 SIGINT 기본값을 되돌려 재측정. 남은 서버가 8080을 쥐어 다음 기동이 포트 충돌로 실패한 것도 같은 원인
+  - ③ Swagger UI 검색 호출 시간 초과 — 파라미터 입력란의 지연 반영(debounce) 전에 Execute를 눌러 "Required field is not provided"(검증 스크립트 문제) → 1초 대기 후 통과
+  - ④ SKILL 정적 점검이 README 스택 표의 "SQLite3"에 걸림(대소문자 무시 검색) → CLI 이름은 대소문자 구분으로 정정
+- 독립 리뷰(`step-reviewer`): 결함 없음, 낮음 2건 반영 — ① CI 예시 실행이 비대화형이라 붙여 넣기 함정을 못 잡음 → 정적 검사 추가 ② CI·D-18의 예시 실행 범위 과장 → Linux·macOS로 정정. 불확실 사항: Windows PowerShell 5.1 → CI Windows 단계를 5.1로 바꾸고 포트 명령은 인자 전체를 큰따옴표로, "서버 실행 중에도 테스트 가능" 문구는 macOS 실측뿐이라 삭제, Mockito 원인은 실험으로 확정
+- 다음: 사용자 확인 후 13단계 `/submission-check <이름>`
 
 ### 2026-10-26 · S16 10단계 추가 테스트(TEST-X1·X3·X4), 반복·순서 독립 확인
 - 작성: `InvalidTokenTest`(TEST-X1 4건 — 다른 키 서명·sub 변조·alg: none·1초 전 만료), `DuplicateSignupTest`(TEST-X3), `ValidationErrorTest`(TEST-X4 6건 — 가입 4종 파라미터화·TODO 4종·읽을 수 없는 본문·숫자 아닌 ID). 운영 코드 변경 없음. 커밋 `db98c0d`, 리뷰 반영 `1e1e081`
@@ -72,41 +99,9 @@
 - 독립 리뷰(`step-reviewer`): 기능·보안 결함 없음. 지적 1건(요청 DTO 이름) 반영. 참고 사항도 반영: 새 비밀번호 72바이트 테스트 추가, 탈퇴 뒤 남은 토큰으로 만든 TODO가 남는 한계를 D-21·security.md에 명시, 리뷰어가 확인하지 못한 기존 DB 열 추가·리스너 실패 롤백은 실측.
 - 다음: 10단계(TEST-X1·X3·X4, 2회 연속 실행, `./gradlew build`)
 
-### 2026-10-26 · S14 9단계 Swagger 문서(API-10), 사용자 지시 #13(제출 ZIP 실측·선택 사항 설계·평가 기준·실격 조건 점검)
-- CI 재실행(run 40286963395, 커밋 `45ec1bb`): 6개 조합 성공, 스모크 6/6 통과, Windows 작업의 캐시 저장 경고 사라짐(Windows JDK 17 캐시 저장 성공, 빌드 로그의 `##[warning]`·`##[error]` 0건)
-- 설정 전 문서(`api-docs-before.json`): 제목 "OpenAPI definition" v0, 보안 스키마 없음, 태그 `*-controller`, `POST /todos` 200, 응답 형식 `*/*`. 기동 로그에 springdoc "enabled by default" WARN 2건 — springdoc 2.8.17 소스에서 속성이 바인딩되지 않을 때 남기는 경고임을 확인
-- 구현: `global/config/OpenApiConfig`(`@OpenAPIDefinition` 제목·설명·태그 순서, `@SecurityScheme` `bearerAuth` HTTP bearer JWT, 이름 상수), 컨트롤러 3개에 `@Tag`·`@Operation(summary)`, 보호 API에만 `@SecurityRequirement`(TodoController 클래스·`/users/me`), `POST /todos` `@ApiResponse(201)`, `application.yaml` springdoc 명시 설정 2개 + `default-produces-media-type`, 테스트 `ApiDocsTest`(API-10, 2건)
-- 실행 명령과 결과:
-  - bootRun + curl(`apidocs9.sh`): `/v3/api-docs` 200, `/swagger-ui.html` 302 → `/swagger-ui/index.html` 200, springdoc WARN 0건(남은 WARN은 의도한 서명 키 경고 1건), ERROR 0건. 문서: 보호 API 6개만 `security: bearerAuth`, `POST /todos` 201(`TodoResponse`), 응답 형식 `application/json`, 태그 사용자 → TODO
-  - JDK 17 `./gradlew test` → 19건 통과. 변이 3종(되돌린 뒤 `cmp` 일치): `/users/me`의 `@SecurityRequirement` 제거 → 보안 표시 테스트 실패, `@ApiResponse(201)` 제거 → 상태 코드 테스트 실패, 리뷰 반영 뒤 `/users/me`가 없는 스키마 이름(`"bearer"`)을 가리키게 함 → 보안 표시 테스트 실패(반영 전 테스트는 `security` 존재만 봐서 통과했을 경우)
-  - 헤드리스 Chrome 155 + DevTools Protocol(Node 내장 WebSocket, 스크래치 `swagger-ui-e2e.mjs`): Swagger UI 제목·태그 순서·자물쇠 6개 확인 → Authorize 대화상자에 로그인 토큰 입력 → `GET /users/me` 200(curl에 Bearer 헤더), `POST /todos` 201 + `location: /todos/{id}`, 승인 상태에서도 `POST /users/login`은 Bearer 헤더 없이 200. 실행 로그에 ERROR 0건, 비밀번호·토큰 0건
-  - JDK 17·21 `./gradlew clean build` → BUILD SUCCESSFUL, tests=19 failures=0, `todo.db` 없음. 정적 점검(도메인 순수성·web → domain·application의 프레임워크 import) 위반 0건, springdoc 어노테이션은 웹 어댑터와 `global/config`에만 있음
-- 독립 리뷰(`step-reviewer`): 막을 문제 없음 — 실제 API 동작 불변(`default-produces-media-type`은 springdoc 문서 생성에만 쓰임, `application/problem+json` 단언 테스트 통과), TEST-01~04 파일 diff 없음, 테스트 19건 재현. 지적 4건 반영: ① `@Info` 3번 "로그인 응답의 refresh_token" → "가장 최근에 받은 refresh_token"(회전 때문에 두 번째 재발급부터 401·전체 폐기로 이어지는 안내였다) ② used_prompts #12 완료 기록 ③ `ApiDocsTest`가 `security` 존재만 보던 것을 `[{bearerAuth: []}]` 값 비교로 강화 ④ summary를 명세 문구로("내 목록 조회", "로그인, access_token 반환"). 반영 뒤 JDK 17·21 `clean build` 19건 통과, 기동 상태 문서에서 고친 문구 확인
-- 실수·정정: 브라우저 확장이 연결되어 있지 않아 헤드리스 Chrome으로 대체했다. 첫 실행은 작업 블록을 펼치는 선택자가 바깥 `div`를 골라 시간 초과 → 버튼만 고르도록 고침. 상태 코드 셀 선택자가 표 머리글("Code")을 읽음 → 응답 행으로 고쳐 재실행
-- 9단계 커밋 CI(run 40289889584, `97c0d75`): 6개 조합 성공, 스모크 6/6, `##[warning]`·`##[error]` 0건
-- #13 제출 ZIP 실측(스크래치 `zip-exclusion-check.sh` — 저장소 사본에서 SKILL 7단계 명령 그대로):
-  - 사본에 실제로 있던 `build/`(파일 115개, 테스트 DB 2개)·`.gradle/`(14개)·더미 `target/`·루트와 하위 폴더의 `*.db`·`*.db-journal`·`*.db-wal` → ZIP에서 모두 빠짐. `.git/`·`.idea/`·`memory-bank/`·`*.jsonl`·`settings.local.json`도 빠짐
-  - 포함: `src/main`·`src/test`·`build.gradle`·`settings.gradle`·Wrapper·`prompts/used_prompts.md`·명세 사본(163항목, 216KB). **`README.md`는 아직 없음(12단계)**. `gradlew` `-rwxr-xr-x`(ZIP 안·압축 해제 뒤), 줄바꿈 `gradlew` LF·`gradlew.bat` CRLF, 로컬 절대 경로·회사 식별자·키 패턴 0건
-- #13 선택 사항: 설계가 없음을 확인(D-14는 처리 시점만) → D-21로 OPT-01~03 설계(rules api·security·persistence·architecture·testing, 체크리스트 OPT·R-13). 근거 실측:
-  - sqlite3: 마지막 사용자 행 삭제 → 새 가입자가 같은 id를 받음(탈퇴를 행 삭제로 하면 탈퇴자의 남은 토큰이 새 계정에 닿음), 탈퇴 표시만 하면 새 id. 기본값 없는 NOT NULL 열 추가는 실패, `default false`면 성공
-  - 소스: Hibernate 6.6.53 SQLite 방언은 PK를 표 끝 `primary key (id)`로 만들어 AUTOINCREMENT 불가, 스키마 갱신은 기존 표에 `add column` 시도. Spring Data JPA 3.5.13 `Containing`은 `%`·`_` 이스케이프. Spring 6.2.19 레코드 `@ModelAttribute` 검증 실패는 `MethodArgumentNotValidException`
-- #13 평가 기준·실격 조건 점검: 명세 전 항목 재대조(README·최종 ZIP 외 충족), SKILL 4단계 정적 점검 8항목 통과(도메인 순수성·고정 키·사용 금지 기능·테이블 생성 경로·커밋 작성자 27개 모두 noreply·버전·원격 추적 파일·회사 식별자). 남은 실격 위험은 README 미작성 하나(12단계)
-- 다음: 사용자 확인(10단계 진행, OPT 구현 승인)
-
-### 2026-10-26 · S13 9단계 전 명세 전수 재대조(실격 위험 점검), 서명 키 환경 변수 이름 변경, README 명령 CI 실측
-- 사용자 결정: TTL은 yml 유지(D-06), Windows·Linux 실행 검증은 GitHub Actions로 실측(D-18)
-- 명세 재대조: Notion 원문 재수집 — 변경 없음. 기술 조건·테이블 생성·SQLite 설정·API 8개·인증·필수 테스트 ✅, README·제출물·선택 사항은 해당 단계에서 처리
-- 실격 조건 1 위험 점검:
-  - 재현: 다른 프로젝트용 값 `JWT_SECRET='my-jwt-secret-for-another-project'`가 셸에 있으면 `bootRun`이 "JWT_SECRET은 Base64 문자열이어야 합니다."로 기동 실패(스크래치 `jwt-collision.log`) → 환경 변수를 `TODO_JWT_SECRET`으로 변경(`application.yaml`, `JwtConfig` 메시지, rules·CLAUDE.md·SKILL·D-06, 커밋 `0e419f3`)
-  - 확인(`env-rename-check.txt`): JDK 17 `./gradlew test` 17건 통과. ① `JWT_SECRET`만 있음 → 기동·가입 201(미설정 WARN) ② `TODO_JWT_SECRET`에 잘못된 값 → 기동 실패("TODO_JWT_SECRET은 Base64 문자열이어야 합니다.") ③ 올바른 32바이트 Base64 → 기동·가입 201. 모두 로그에 키 값 0건. 첫 실행에서 ①이 BUILD FAILED로 기록됐으나 단독·전체 재실행에서 재현되지 않았다(첫 로그가 덮여 원인 미확인 → 시나리오별 로그로 저장하도록 스크립트 수정)
-  - 인코딩: `JAVA_TOOL_OPTIONS=-Dfile.encoding=windows-1252`로 Windows 기본 인코딩을 흉내 내 JDK 17·21 `clean build`·한국어 응답 정상. `--debug` 로그에서 Gradle 9.8.2가 javac에 `-encoding UTF-8`을 넘김 확인 → 빌드 변경 불필요(Gradle을 거치지 않은 javac 17 + cp1252는 한국어 리터럴에서 실패)
-  - Windows·Linux: CI 추가(`.github/workflows/ci.yml`, `.github/ci/ReadmeSmoke.java`, 커밋 `5e37ef0`). run 40277959532: 6개 조합 성공 — 각 작업 `> Task :test` 실행·BUILD SUCCESSFUL, `todo.db` 없는 상태의 `bootRun` 뒤 스모크 10개 호출(가입 201·로그인 200·내 정보 200·토큰 없음 401·생성 201·목록 200·수정 200·삭제 204·삭제 뒤 404(한국어 detail 보존)·재발급 200), Linux·macOS `.schema` 테이블 3개·인덱스 2개, Windows `todo.db` 생성
-- 실수·정정:
-  - Write 도구가 `ReadmeSmoke.java`의 `\uXXXX` 이스케이프를 실제 한글로 바꿔 저장 → cp1252 흉내 실행의 비교 실패로 발견, 이스케이프로 되돌리고 `file`로 ASCII 확인 뒤 JDK 17·21 cp1252 흉내 실행 통과
-  - CI Windows 작업만 작업 뒤 캐시 저장이 경고로 실패(`fileHashes.lock … Device or resource busy` — 실행 중인 서버의 Gradle 데몬이 잠금 파일을 쥠) → 로그 보관 전에 서버를 멈추는 단계 추가(재실행으로 확인)
-- 12단계 반영 예정: 8080 포트가 쓰이고 있을 때의 실행 방법(실측 후), `used_prompts.md` 맨 앞 요약 검토
-- 기타: 압축 뒤 대조 — `prompt-history.jsonl`의 "claude-hub …" 프롬프트는 다른 세션(`be699439…`)의 것으로 과제와 무관해 기록 대상이 아니다. 맥이 잠들어 응답이 끊김 → 사용자 지시로 `caffeinate -ims -w <Claude Code PID>` 실행(자동 재개 훅은 없음 — `StopFailure`는 출력 무시)
-- 다음: CI 재실행 확인 → 9단계 Swagger → #13 점검·보고
+### 2026-10-26 · S13~S14 요약 (세부는 이 파일의 git 이력)
+- S13 9단계 전 명세 전수 재대조(변경 없음). 다른 프로젝트용 `JWT_SECRET`이 셸에 있으면 기동이 실패하는 위험을 재현해 환경 변수를 `TODO_JWT_SECRET`으로 바꿈(D-06, R-11). Windows 기본 인코딩(cp1252) 흉내 빌드·한국어 응답 정상. CI 추가 — Windows·Linux·macOS × JDK 17·21에서 README 명령과 스모크 10회(D-18, R-12), Windows 캐시 저장 경고는 서버 종료 단계로 해소
+- S14 9단계 Swagger(API-10): `OpenApiConfig`(제목·Bearer 스키마·태그 순서), 보호 API에만 `@SecurityRequirement`, `POST /todos` 201 문서화, springdoc 기본 활성 WARN 제거, 헤드리스 Chrome으로 Authorize → 보호 API 호출 확인, 리뷰 4건 반영. #13: 제출 ZIP 제외 항목 실측(`build/`·`.gradle/`·`target/`·`*.db` 빠짐, `gradlew` 실행 권한 유지), 선택 사항 설계 D-21(탈퇴는 탈퇴 표시 — SQLite ID 재사용 재현, R-13), 평가 기준·실격 조건 점검
 
 ### 2026-10-25~26 · S9~S12 요약 (세부는 이 파일의 git 이력)
 - S9 6단계 User·Auth(TEST-01): 가입·로그인(`access_token`만)·내 정보, bcrypt 72바이트 검증·로그인 실패 같은 401, 어댑터 package-private. JDK 17·21 9건 통과, bootRun으로 HS256·`exp-iat=3600`·`{bcrypt}` 저장값 확인

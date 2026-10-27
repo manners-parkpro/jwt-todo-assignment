@@ -3,7 +3,7 @@
 JWT 인증이 적용된 TODO REST API다. 회원가입·로그인으로 받은 액세스 토큰으로 **자기 TODO만** 생성·조회·수정·삭제한다.
 
 - 과제의 필수 API 8개와 필수 테스트 4종을 구현했다. 여기에 액세스 토큰 재발급(리프레시 토큰)과 선택 사항(제목 검색, 회원정보 수정·탈퇴, 추가 테스트)을 더했다.
-- 이 문서의 명령은 macOS에서 직접 실행해 확인했다. GitHub Actions(`.github/workflows/ci.yml`)로도 Windows·Linux·macOS × JDK 17·21에서 실행해 확인한다.
+- 이 문서의 명령은 macOS에서 직접 실행해 확인했다. GitHub Actions(`.github/workflows/ci.yml`)로도 Gradle 명령은 Windows·Linux·macOS × JDK 17·21에서, curl 예시는 Linux·macOS에서 실행해 확인한다.
 
 ## 선택한 스택 — B. Spring Boot
 

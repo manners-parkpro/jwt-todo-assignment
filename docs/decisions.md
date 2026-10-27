@@ -24,7 +24,7 @@
 | D-15 | 토큰 재발급(Refresh Token) 확장과 필수 테스트 보호 | 확정 |
 | D-16 | 프롬프트 기록 보존(같은 턴 기록·훅 자동 백업·백필) | 확정 |
 | D-17 | 지침 로드 보장과 검증(CLAUDE.md 전체 주입 확인, 로드 기록 훅) | 확정 |
-| D-18 | README의 Windows 명령 범위 | 확정(S13 CI 실측) |
+| D-18 | README의 Windows 명령 범위 | 확정(S13 CI 실측, S17 예시·포트 명령 보완) |
 | D-19 | 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 | 확정 |
 | D-20 | 계층 간 DTO(Command·Result)와 네이밍 규칙(참고 프로젝트) | 확정 |
 | D-21 | 선택 사항(가산점) 설계 — 제목 검색·회원정보 수정·탈퇴(soft delete)·기능 간 이벤트 | 확정(S15 구현·실측 완료) |
@@ -188,6 +188,11 @@
   - 실행: `todo.db`가 없는 상태에서 `./gradlew bootRun`(Windows `.\gradlew.bat bootRun`)만으로 띄운 뒤 `.github/ci/ReadmeSmoke.java`(JDK 단일 파일 실행, ASCII 소스)가 가입 201 → 로그인 200 → 내 정보 200 → 토큰 없는 목록 401 → TODO 생성 201·목록 200·수정 200·삭제 204 → 삭제 뒤 조회 404(한국어 detail 보존) → 재발급 200을 확인한다. 테이블이 있어야 성공하는 호출이므로 실행 명령만으로 테이블이 생김을 함께 보인다(Linux·macOS는 `sqlite3 .schema`로 테이블 3개·인덱스 2개 출력).
   - 결과: 커밋 `5e37ef0` 실행(run 40277959532)에서 6개 조합 모두 성공 — 각 작업에서 `> Task :test` 실행·BUILD SUCCESSFUL, 스모크 10개 호출이 기대 상태 코드와 일치. Windows에서도 404 응답의 한국어 detail이 그대로였다(소스 컴파일 인코딩 문제 없음 — Gradle이 javac에 `-encoding UTF-8`을 넘기는 것은 로컬 디버그 로그로 확인).
   - 같은 실행에서 Windows 작업만 작업 뒤 캐시 저장이 경고로 실패했다(`fileHashes.lock … Device or resource busy` — 실행 중인 서버의 Gradle 데몬이 잠금 파일을 쥠). 검증 결과와는 무관하지만, 서버를 멈추는 단계를 로그 보관 전에 두었다.
+- **보완(S17, README 작성)**:
+  - Windows 명령에 8080 포트 충돌 때의 `.\gradlew.bat bootRun "--args=--server.port=8081"`을 더했다. Wrapper 명령에 Gradle 표준 옵션만 붙인 것이다. macOS/Linux의 `--args='--server.port=8081'`과 달리 인자 전체를 큰따옴표로 감쌌다. PowerShell에서는 `-`로 시작하고 `.`이 든 인자가 `.`에서 나뉘어 넘어가는 사례가 보고돼 있고(Maven `-Dmaven.test.skip=true` → `Unknown lifecycle phase ".test.skip=true"`, Apache MNG-7415는 셸 문제로 종료), 인자 전체를 따옴표로 감싸면 해결된다. 그래서 PowerShell 버전에 따라 구문 분석이 달라질 여지를 없앴다. CI는 README 서버가 8080을 쓰는 상태에서 이 명령을 PowerShell 구문 그대로(`Start-Job` 스크립트 블록) 실행해 확인한다.
+  - CI의 Windows 단계는 S17부터 Windows 기본 셸인 Windows PowerShell 5.1(`shell: powershell`)로 실행한다. 채점자가 PowerShell을 열면 기본으로 뜨는 셸이기 때문이다. PowerShell 7(`pwsh`)에서는 S13~S16의 CI가 `.\gradlew.bat test`·`bootRun`을 실측했다.
+  - README의 curl 예시(`## 요청 예시`)는 실행 가능한 형태로 쓰고, CI가 Linux·macOS의 bash와 macOS의 zsh로 적힌 그대로 실행한다(`.github/ci/readme-examples.sh`). 응답 상태가 README 본문의 기대값과 순서까지 같아야 통과한다. 비대화형 실행으로는 드러나지 않는 붙여 넣기 함정(주석·`!`·`USERNAME=`)은 같은 스크립트가 정적으로 검사한다. `ReadmeSmoke.java`는 README의 API를 모두 호출하도록 넓혔다(15회 — 검색·회원정보 수정·탈퇴, 탈퇴 뒤 로그인 401 포함).
+  - 근거: README에 적은 명령은 실격 조건 1의 대상이다. 그래서 Gradle 명령은 3개 OS에서 실측하고, curl 예시는 README가 대상으로 하는 Linux·macOS에서 실측한다(Windows에는 Swagger UI를 안내한다). curl 예시는 이 PC(macOS)의 기본 대화형 bash·zsh에 붙여 넣어서도 확인했다. 이때 macOS 기본 zsh에서는 주석·`USERNAME`·따옴표 없는 `?`가 깨짐을 실측해 README 작성 규칙(`docs.md`)에 넣었다.
 
 ### D-19 결정적 강제(커밋·푸시 훅)와 단계별 독립 리뷰 — 확정
 - **결정**:

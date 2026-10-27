@@ -28,7 +28,7 @@ disable-model-invocation: true
    - 도메인 순수성: `grep -rnE 'import (org\.springframework|jakarta\.persistence|com\.fasterxml)' src/main/java/com/assignment/*/domain` → 출력 없음
    - 고정 키: `grep -rniE 'secret' src/main/resources src/test/resources` → `${TODO_JWT_SECRET:}` 참조 외 없음
    - 사용 금지 기능: `grep -rnE 'UnboundIdContainer|AesBytesEncryptor|SpelExpressionParser|nativeQuery|@NativeQuery' src/main` → 출력 없음
-   - 테이블 생성 경로 단일화: `ls src/main/resources` → `schema.sql`·`data.sql` 없음, `grep -niE 'sqlite3|create table|insert into' README.md` → 출력 없음
+   - 테이블 생성 경로 단일화: `ls src/main/resources` → `schema.sql`·`data.sql` 없음, `grep -nE 'sqlite3' README.md`와 `grep -niE 'create table|insert into' README.md` → 둘 다 출력 없음. CLI 이름(`sqlite3`)은 대소문자를 구분해 찾는다 — 스택 표의 DB 이름 "SQLite3"(명세 표기)는 명령이 아니다(S17)
    - 커밋 작성자: `git log --format='%ae%n%ce' | sort -u` → GitHub noreply 주소만(회사 도메인 없음)
    - 버전: `build.gradle`의 Boot 3.5.x·`options.release = 17`·`tomcat.version`, `gradle-wrapper.properties`의 9.8.2
 5. **문서**: README 필수 섹션(`.claude/rules/docs.md`)이 있고 명령이 실측과 일치하는지, `prompts/used_prompts.md`가 최신 작업까지 기록됐는지 확인한다.

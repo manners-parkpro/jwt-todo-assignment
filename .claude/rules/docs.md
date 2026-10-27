@@ -9,15 +9,17 @@ paths:
 
 ## README.md (제출물 — 명세: 선택한 스택, 실행 방법, 테스트 실행 방법, API 목록 요약)
 1. 선택한 스택 — "B. Spring Boot"와 버전(Java 17 이상·Spring Boot 3.5.16·Gradle Wrapper 9.8.2·Spring Data JPA·SQLite3·JWT(HS256)·JUnit 5)
-2. 사전 요구사항 — JDK 17 이상(Gradle 별도 설치 불필요). 압축 해제 도구에 따라 `gradlew`의 실행 권한이 빠질 수 있으므로 `Permission denied`일 때의 `chmod +x gradlew`를 함께 적는다(실격 조건 1 대비, 실측 후 기록)
-3. 실행 방법 — `./gradlew bootRun`. 테이블은 이 명령만으로 자동 생성된다(`ddl-auto: update`, `todo.db` 위치)고 적는다. `TODO_JWT_SECRET`은 선택(미설정 시 임의 키, 재시작하면 액세스 토큰 무효 → 재발급)이며 고정하는 방법을 macOS/Linux 명령으로 적는다.
+2. 사전 요구사항 — JDK 17 이상(Gradle 별도 설치 불필요). 압축 해제 도구에 따라 `gradlew`의 실행 권한이 빠질 수 있으므로 `Permission denied`일 때의 `chmod +x gradlew`를 함께 적는다(실격 조건 1 대비 — S17 실측: Python `zipfile`로 풀면 권한이 빠지고 zsh `permission denied`·bash `Permission denied`, `unzip`·Finder(`ditto`)·`tar`는 유지)
+3. 실행 방법 — `./gradlew bootRun`. 테이블은 이 명령만으로 자동 생성된다(`ddl-auto: update`, `todo.db` 위치)고 적는다. `TODO_JWT_SECRET`은 선택(미설정 시 임의 키, 재시작하면 액세스 토큰 무효 → 재발급)이며 고정하는 방법을 macOS/Linux 명령(같은 셸에서 `export` 후 실행 — 재시작 뒤에도 기존 액세스 토큰 200, S17 실측)으로 적는다. 8080 포트가 사용 중일 때의 실행 방법(`--args='--server.port=8081'`)도 적는다.
 4. 테스트 실행 방법 — `./gradlew test` (환경 변수 불필요)
 5. API 목록 요약 — `.claude/rules/api.md` 표와 일치, Swagger UI 주소
 6. 인증 방법 — 로그인 → `Authorization: Bearer <access_token>`, 액세스 토큰 만료 1시간 → `POST /users/refresh`로 재발급(리프레시 토큰 7일, 재발급 때마다 교체되고 이전 토큰은 무효)
 
 - README에는 SQL·`sqlite3` 명령을 적지 않는다(테이블 생성은 실행·테스트 명령만으로 이뤄진다 — `persistence.md`).
-- 명령은 macOS/Linux 기준으로 적고, Windows는 Gradle Wrapper 표준 명령(`.\gradlew.bat bootRun`, `.\gradlew.bat test`)만 함께 적는다. 이 PC(macOS)에서 실행할 수 없는 Windows 명령은 GitHub Actions CI(`.github/workflows/ci.yml` — Windows·Linux·macOS × JDK 17·21)로 실측하고, README 명령을 바꾸면 CI 스모크(`.github/ci/ReadmeSmoke.java`)도 함께 맞춘다(D-18).
+- 명령은 macOS/Linux 기준으로 적고, Windows는 Gradle Wrapper 명령(`.\gradlew.bat bootRun`, `.\gradlew.bat test`, 포트 변경 `.\gradlew.bat bootRun "--args=--server.port=8081"` — PowerShell 구문 분석 차이를 피하려고 인자 전체를 큰따옴표로 감싼다)만 함께 적는다. 이 PC(macOS)에서 실행할 수 없는 Windows 명령은 GitHub Actions CI(`.github/workflows/ci.yml` — Windows·Linux·macOS × JDK 17·21, Windows는 기본 셸인 Windows PowerShell 5.1)로 실측하고, README 명령이나 API 목록을 바꾸면 CI(`.github/ci/ReadmeSmoke.java` — README의 API를 모두 호출, `.github/ci/readme-examples.sh`)도 함께 맞춘다(D-18).
 - 그 밖의 명령은 실제로 실행해 확인한 것만 적고, 확인 근거를 `docs/progress.md`에 남긴다.
+- 명령 코드 블록에는 주석(`#`)을 넣지 않는다. macOS 기본 zsh는 대화형에서 주석을 인식하지 않아(`interactivecomments` 꺼짐), 붙여 넣으면 `command not found: #`가 나고 같은 줄의 변수 대입도 적용되지 않는다(S17 실측). 설명과 기대 상태 코드는 블록 밖 본문에 쓴다. 변수 이름은 셸 특수 변수를 피하고(zsh에서 `USERNAME` 대입은 무시된다), `?`가 들어간 URL은 따옴표로 감싼다(zsh `no matches found`).
+- `## 요청 예시` 절의 bash 블록은 CI(`readme-examples.sh`, Linux·macOS)가 적힌 그대로 이어서 실행하고, 본문의 ``→ `201` `` 표기를 차례대로 기대 상태 코드로 비교한다. 요청을 더하거나 빼면 표기도 함께 고친다. 스크립트 실행으로는 대화형 붙여 넣기에서만 깨지는 문장(주석·`!`·`USERNAME=`)이 드러나지 않으므로 같은 스크립트가 정적으로 검사해 막는다.
 - 예시에는 실제 토큰·키 대신 `<access_token>` 같은 자리표시자를 쓴다.
 
 ## prompts/used_prompts.md (필수 제출물 — 없으면 실격)
